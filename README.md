@@ -25,6 +25,12 @@ An immersive, browser-based journey into gravitational time dilation inspired by
 
 ---
 
+## Live Preview
+
+- Experience the project in your browser: <https://zarboni.github.io/time-dilation-clock/>
+
+---
+
 ## Controls & Interactions
 
 | Control | What It Does |
