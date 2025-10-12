@@ -1,4 +1,4 @@
-# Time Dilation Clock
+# Timefall: A Relativity Clock
 
 An immersive, browser-based journey into gravitational time dilation inspired by *Interstellar*. Watch two clocks tick at different speeds, explore animated spacetime visuals, and hear ambient music as you immerse in the pull of gravity.
 
