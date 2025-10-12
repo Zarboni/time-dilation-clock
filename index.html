@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Time Dilation Clock</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Titillium+Web:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="starfield"></div>
+    <div class="galactic-fog"></div>
+
+    <section id="landing" class="landing-screen">
+      <div class="landing-content">
+        <h1>Time Dilation Clock</h1>
+        <p>Visualizing the flow of time near a black hole</p>
+        <button id="beginButton" class="begin-button">Begin</button>
+      </div>
+    </section>
+
+    <main id="experience" class="experience hidden">
+      <header class="headline">
+        <h2>Chronometry Across the Event Horizon</h2>
+        <p>
+          Watch how time stretches as gravity bends spacetime—two perspectives,
+          one cosmic moment.
+        </p>
+      </header>
+
+      <section class="clock-grid">
+        <article class="clock-card" data-type="observer">
+          <h3>Observer Time</h3>
+          <div class="clock-display" id="observerClock">--:--:--</div>
+          <p class="clock-caption">
+            An external observer, far from the black hole, experiences time in a
+            familiar cadence.
+          </p>
+        </article>
+
+        <article class="clock-card singularity" data-type="singularity">
+          <h3>Near the Singularity</h3>
+          <div class="clock-display" id="singularityClock">--:--:--</div>
+          <p class="clock-caption">
+            Closer to the event horizon, time dilates and ticks crawl under
+            intense gravitational pull.
+          </p>
+          <div class="clock-tooltip">
+            <span class="tooltip-title">Gravitational Time Dilation</span>
+            <p>
+              Δt' = Δt × √(1 - gravityFactor)<br />
+              gravityFactor = 0.8
+            </p>
+            <p>
+              Strong gravity slows proper time for the traveler. To a distant
+              observer, their clock lags behind.
+            </p>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <audio id="ambientAudio" preload="auto"></audio>
+    <script src="script.js"></script>
+  </body>
+</html>
