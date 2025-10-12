@@ -15,6 +15,20 @@
   <body>
     <div id="starfield"></div>
     <div class="galactic-fog"></div>
+    <div class="particle-layer" aria-hidden="true">
+      <span class="particle"></span>
+      <span class="particle"></span>
+      <span class="particle"></span>
+      <span class="particle"></span>
+      <span class="particle"></span>
+      <span class="particle"></span>
+      <span class="particle"></span>
+      <span class="particle"></span>
+      <span class="particle"></span>
+      <span class="particle"></span>
+      <span class="particle"></span>
+      <span class="particle"></span>
+    </div>
 
     <section id="landing" class="landing-screen">
       <div class="landing-content">
@@ -45,12 +59,48 @@
 
         <article class="clock-card singularity" data-type="singularity">
           <h3>Near the Singularity</h3>
+          <!-- SVG accretion disk + lensing halo -->
+          <div class="accretion-visual" aria-hidden="true">
+            <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id="diskGlow" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#0b1b33" stop-opacity="0" />
+                  <stop offset="55%" stop-color="#4dd4ff" stop-opacity="0.35" />
+                  <stop offset="72%" stop-color="#a875ff" stop-opacity="0.5" />
+                  <stop offset="90%" stop-color="#0b1b33" stop-opacity="0" />
+                </radialGradient>
+                <radialGradient id="eventHorizon" cx="50%" cy="50%" r="50%">
+                  <stop offset="20%" stop-color="#04070f" />
+                  <stop offset="60%" stop-color="#090f22" />
+                  <stop offset="85%" stop-color="#162a4a" stop-opacity="0" />
+                </radialGradient>
+                <filter id="gravitationalWarp">
+                  <feTurbulence type="turbulence" baseFrequency="0.015" numOctaves="2" seed="42" />
+                  <feGaussianBlur stdDeviation="4" result="blurred" />
+                  <feDisplacementMap in="SourceGraphic" in2="blurred" scale="12" />
+                </filter>
+              </defs>
+              <circle cx="200" cy="200" r="170" fill="url(#eventHorizon)" />
+              <g class="disk" filter="url(#gravitationalWarp)">
+                <ellipse cx="200" cy="200" rx="190" ry="120" fill="url(#diskGlow)" />
+                <ellipse cx="200" cy="200" rx="150" ry="95" fill="none" stroke="#6fe4ff" stroke-opacity="0.2" stroke-width="6" />
+                <ellipse cx="200" cy="200" rx="110" ry="70" fill="none" stroke="#b995ff" stroke-opacity="0.15" stroke-width="8" />
+              </g>
+            </svg>
+          </div>
           <div class="clock-display" id="singularityClock">--:--:--</div>
           <p class="clock-caption">
             Closer to the event horizon, time dilates and ticks crawl under
             intense gravitational pull.
           </p>
-          <div class="clock-tooltip">
+        </article>
+      </section>
+
+      <section class="info-row">
+        <div class="quote-stream hidden" id="quoteContainer" aria-live="polite"></div>
+
+        <aside class="tooltip-container" aria-hidden="true">
+          <div class="clock-tooltip" id="formulaTooltip">
             <span class="tooltip-title">Gravitational Time Dilation</span>
             <p>
               Δt' = Δt × √(1 - gravityFactor)<br />
@@ -61,9 +111,36 @@
               observer, their clock lags behind.
             </p>
           </div>
-        </article>
+        </aside>
       </section>
+
+      <footer id="inspirationQuote" class="inspiration-quote hidden">
+        <blockquote>
+          “Time is relative, okay? It can stretch, and it can squeeze, but... it can't run backwards.”
+        </blockquote>
+        <cite>— <span>Cooper</span>, Interstellar</cite>
+      </footer>
     </main>
+
+    <div id="audioControlHub" class="audio-controls hidden" aria-hidden="true">
+      <button type="button" id="muteToggle" class="control-button" aria-label="Toggle sound">
+        <span class="icon-sound"></span>
+      </button>
+      <label for="volumeSlider" class="sr-only">Volume</label>
+      <input
+        type="range"
+        id="volumeSlider"
+        class="volume-slider"
+        min="0"
+        max="1"
+        step="0.01"
+        value="1"
+        aria-valuemin="0"
+        aria-valuemax="1"
+        aria-valuenow="1"
+        aria-label="Adjust volume"
+      />
+    </div>
 
     <audio id="ambientAudio" preload="auto"></audio>
     <script src="script.js"></script>

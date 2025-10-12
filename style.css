@@ -201,6 +201,8 @@ body {
   text-align: center;
   margin-bottom: 1.5rem;
   text-shadow: 0 0 18px rgba(111, 228, 255, 0.5);
+  position: relative;
+  z-index: 1;
 }
 
 .clock-caption {
@@ -210,8 +212,65 @@ body {
   line-height: 1.6;
 }
 
+.info-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(1.5rem, 3vw, 2.8rem);
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-top: clamp(1.2rem, 2.4vw, 3rem);
+}
+
+.quote-stream,
+.tooltip-container {
+  flex: 1 1 clamp(300px, 38vw, 520px);
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.quote-stream {
+  padding: 0 clamp(0.8rem, 2vw, 1.5rem);
+  flex-direction: column;
+  gap: 0.4rem;
+  min-height: 96px;
+  align-items: flex-start;
+  text-align: left;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.quote-stream.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.quote-stream .quote-text {
+  margin: 0;
+  font-style: italic;
+  font-size: clamp(1.05rem, 2.1vw, 1.35rem);
+  color: var(--text-primary);
+}
+
+.quote-stream .quote-author {
+  margin: 0;
+  font-size: clamp(0.92rem, 1.7vw, 1.1rem);
+  color: var(--accent-deep);
+  letter-spacing: 0.08rem;
+  text-transform: uppercase;
+}
+
+.quote-stream.fade-out {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
 .clock-card.singularity {
   border-color: rgba(185, 149, 255, 0.4);
+  padding-top: clamp(3rem, 5vw, 3.8rem);
+  padding-bottom: clamp(2.8rem, 4vw, 3.6rem);
+  overflow: visible;
 }
 
 .clock-card.singularity::before {
@@ -244,24 +303,43 @@ body {
   animation: accretionOrbit 18s linear infinite;
 }
 
-.clock-tooltip {
+.accretion-visual {
   position: absolute;
-  inset-inline: clamp(1.5rem, 3vw, 2.5rem);
-  bottom: clamp(1.5rem, 3vw, 2.5rem);
-  padding: 1.2rem 1.4rem;
+  top: clamp(30%, 18vw, 42%);
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(360px, 65%);
+  aspect-ratio: 1 / 1;
+  pointer-events: none;
+  filter: drop-shadow(0 20px 40px rgba(104, 207, 255, 0.3));
+  z-index: -1;
+}
+
+.accretion-visual svg {
+  width: 100%;
+  height: 100%;
+}
+
+.accretion-visual .disk {
+  transform-origin: 50% 50%;
+  animation: diskSpin 28s linear infinite;
+}
+
+.tooltip-container {
+  position: relative;
+  justify-content: center;
+}
+
+.clock-tooltip {
+  width: min(480px, 100%);
+  padding: 1.4rem 1.6rem;
   border-radius: 18px;
   background: var(--tooltip-bg);
   border: 1px solid rgba(185, 149, 255, 0.35);
   opacity: 0;
-  transform: translateY(18px);
+  transform: translateY(25px);
   pointer-events: none;
-  transition: opacity 0.45s ease, transform 0.45s ease;
-}
-
-.clock-card.singularity:hover .clock-tooltip,
-.clock-card.singularity:focus-within .clock-tooltip {
-  opacity: 1;
-  transform: translateY(0);
+  transition: opacity 0.6s ease, transform 0.6s ease;
 }
 
 .tooltip-title {
@@ -303,6 +381,15 @@ body {
   }
 }
 
+@keyframes diskSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes accretionPulse {
   0%,
   100% {
@@ -331,6 +418,16 @@ body {
   .clock-card.singularity::before,
   .clock-card.singularity::after {
     opacity: 0.65;
+  }
+
+  .info-row {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .quote-stream {
+    align-items: center;
+    text-align: center;
   }
 }
 
