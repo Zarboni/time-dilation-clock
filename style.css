@@ -334,8 +334,7 @@ body {
   margin-top: clamp(1.4rem, 2.6vw, 2.8rem);
 }
 
-.quote-stream,
-.tooltip-container {
+.quote-stream {
   flex: 1 1 clamp(300px, 38vw, 520px);
   display: flex;
   justify-content: flex-start;
@@ -405,9 +404,16 @@ body {
   border-radius: 50%;
 }
 
-.tooltip-container {
-  position: relative;
-  justify-content: center;
+.observer-column {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 2vw, 1.6rem);
+}
+
+.observer-column .tooltip-container {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
 }
 
 .clock-tooltip {
@@ -471,6 +477,14 @@ body {
     text-align: center;
   }
 
+  .observer-column {
+    align-items: center;
+  }
+
+  .observer-column .tooltip-container {
+    justify-content: center;
+  }
+
   .gravity-control {
     text-align: center;
   }
@@ -486,7 +500,6 @@ body {
   .differential-display {
     justify-items: center;
   }
-}
 }
 
 @media (min-width: 2200px) {

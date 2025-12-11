@@ -51,6 +51,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let starfieldAnimationId = null;
   let lensingAnimationId = null;
   let lensingAngle = 0;
+  let starDriftMultiplier = 1;
+  let lensingSpeed = 0.0026;
 
   const formatTime = (date) => {
     const hours = String(date.getHours()).padStart(2, "0");
@@ -104,6 +106,8 @@ document.addEventListener("DOMContentLoaded", () => {
     gravityFactor = clamped;
     const adjusted = Math.min(clamped, 0.999);
     dilationFactor = Math.sqrt(Math.max(0, 1 - adjusted));
+    starDriftMultiplier = 0.5 + gravityFactor * 1.2;
+    lensingSpeed = 0.001 + gravityFactor * 0.003;
     updateGravityDisplay(gravityFactor);
     if (!silent) {
       updateDifferentialValue();
@@ -111,6 +115,10 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const startClocks = () => {
+    if (clockIntervalId) {
+      return;
+    }
+
     baseTimestamp = Date.now();
     lastTickTimestamp = baseTimestamp;
     dilatedElapsed = 0;
@@ -126,10 +134,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const dilatedTime = new Date(baseTimestamp + dilatedElapsed);
       singularityClock.textContent = formatTime(dilatedTime);
+
+      clockIntervalId = window.requestAnimationFrame(tick);
     };
 
     tick();
-    clockIntervalId = window.setInterval(tick, updateInterval);
+  };
+
+  const stopClocks = () => {
+    if (clockIntervalId) {
+      window.cancelAnimationFrame(clockIntervalId);
+      clockIntervalId = null;
+    }
   };
 
   const pickNextQuote = () => {
@@ -198,7 +214,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const playPromise = ambientAudio.play();
     if (playPromise && typeof playPromise.then === "function") {
       playPromise.catch(() => {
-        /* User agent blocked playback; wait for manual interaction. */
+        console.info("Audio playback was blocked by the browser; interact again to enable sound.");
       });
     }
   };
@@ -242,8 +258,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const height = starfieldCanvas.clientHeight;
     starfieldCtx.clearRect(0, 0, width, height);
     stars.forEach((star) => {
-      star.y += 0.045 * star.depth;
-      star.x += 0.012 * star.depth;
+      star.y += 0.045 * star.depth * starDriftMultiplier;
+      star.x += 0.012 * star.depth * starDriftMultiplier;
       if (star.y > height + 12) {
         star.y = -12;
         star.x = Math.random() * width;
@@ -331,7 +347,7 @@ document.addEventListener("DOMContentLoaded", () => {
     lensingCtx.restore();
     lensingCtx.globalCompositeOperation = "source-over";
 
-    lensingAngle += 0.0026;
+    lensingAngle += lensingSpeed;
     lensingAnimationId = window.requestAnimationFrame(renderLensing);
   };
 
@@ -348,39 +364,41 @@ document.addEventListener("DOMContentLoaded", () => {
     renderLensing();
   });
 
-  beginButton.addEventListener("click", () => {
-    if (landingScreen.classList.contains("fade-out")) {
-      return;
-    }
+  if (beginButton) {
+    beginButton.addEventListener("click", () => {
+      if (landingScreen.classList.contains("fade-out")) {
+        return;
+      }
 
-    beginButton.disabled = true;
+      beginButton.disabled = true;
 
-    landingScreen.classList.add("fade-out");
-    experience.classList.remove("hidden");
+      landingScreen.classList.add("fade-out");
+      experience.classList.remove("hidden");
 
-    requestAnimationFrame(() => {
-      experience.classList.add("revealed");
+      requestAnimationFrame(() => {
+        experience.classList.add("revealed");
+      });
+
+      window.setTimeout(() => {
+        landingScreen.style.display = "none";
+      }, 750);
+
+      if (!clockIntervalId) {
+        startClocks();
+      }
+
+      activateAudio();
+      scheduleQuoteReveal();
+      if (differentialCard) {
+        window.setTimeout(() => differentialCard.classList.add("revealed"), 450);
+      }
+
+      if (formulaTooltip) {
+        formulaTooltip.style.opacity = "0";
+        formulaTooltip.style.transform = "translateY(25px)";
+      }
     });
-
-    window.setTimeout(() => {
-      landingScreen.style.display = "none";
-    }, 750);
-
-    if (!clockIntervalId) {
-      startClocks();
-    }
-
-    activateAudio();
-    scheduleQuoteReveal();
-    if (differentialCard) {
-      window.setTimeout(() => differentialCard.classList.add("revealed"), 450);
-    }
-
-    if (formulaTooltip) {
-      formulaTooltip.style.opacity = "0";
-      formulaTooltip.style.transform = "translateY(25px)";
-    }
-  });
+  }
 
   if (singularityCard && formulaTooltip) {
     singularityCard.addEventListener("mouseenter", () => {

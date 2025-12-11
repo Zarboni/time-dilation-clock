@@ -10,6 +10,7 @@ An immersive, browser-based journey into gravitational time dilation inspired by
 - **Interactive Gravity Slider** – Drag to strengthen gravity and immediately see the singularity clock slow down.
 - **Time Differential Panel** – Learn how much extra time passes for a distant observer when an hour slips by near the black hole.
 - **Animated Space Backdrop** – A canvas-powered starfield and gravitational lensing effect create a cinematic feel.
+- **Gravity-Reactive Visuals** – The starfield drift and lensing ring motion subtly speed up or slow down as you adjust gravity.
 - **Rotating Quotes** – Every few seconds a new science or sci-fi quote appears, keeping the narrative alive.
 
 ---

@@ -48,14 +48,29 @@
       </header>
 
       <section class="clock-grid">
-        <article class="clock-card" data-type="observer">
-          <h3>Observer Time</h3>
-          <div class="clock-display" id="observerClock">--:--:--</div>
-          <p class="clock-caption">
-            An external observer, far from the black hole, experiences time in a
-            familiar cadence.
-          </p>
-        </article>
+        <div class="observer-column">
+          <article class="clock-card" data-type="observer">
+            <h3>Observer Time</h3>
+            <div class="clock-display" id="observerClock">--:--:--</div>
+            <p class="clock-caption">
+              An external observer, far from the black hole, experiences time in a
+              familiar cadence.
+            </p>
+          </article>
+          <div class="tooltip-container">
+            <div class="clock-tooltip" id="formulaTooltip">
+              <span class="tooltip-title">Gravitational Time Dilation</span>
+              <p>
+                Δt' = Δt × √(1 - gravityFactor)<br />
+                gravityFactor ≈ <span id="tooltipGravityValue">0.80</span>
+              </p>
+              <p>
+                Strong gravity slows proper time for the traveler. To a distant
+                observer, their clock lags behind.
+              </p>
+            </div>
+          </div>
+        </div>
 
         <article class="clock-card singularity" data-type="singularity">
           <h3>Near the Singularity</h3>
@@ -99,20 +114,6 @@
 
       <section class="info-row">
         <div class="quote-stream hidden" id="quoteContainer" aria-live="polite"></div>
-
-        <aside class="tooltip-container" aria-hidden="true">
-          <div class="clock-tooltip" id="formulaTooltip">
-            <span class="tooltip-title">Gravitational Time Dilation</span>
-            <p>
-              Δt' = Δt × √(1 - gravityFactor)<br />
-              gravityFactor ≈ <span id="tooltipGravityValue">0.80</span>
-            </p>
-            <p>
-              Strong gravity slows proper time for the traveler. To a distant
-              observer, their clock lags behind.
-            </p>
-          </div>
-        </aside>
       </section>
 
       <footer id="inspirationQuote" class="inspiration-quote hidden"></footer>
