@@ -26,6 +26,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const differentialValue = document.getElementById("differentialValue");
   const starfieldCanvas = document.getElementById("starfieldCanvas");
   const lensingCanvas = document.getElementById("lensingCanvas");
+  const gameToggleButton = document.getElementById("gameToggle");
+  const gameMode = document.getElementById("gameMode");
+  const backToTimefallButton = document.getElementById("backToTimefallButton");
 
   if (ambientAudio) {
     ambientAudio.src = "IC.mp3";
@@ -145,6 +148,26 @@ document.addEventListener("DOMContentLoaded", () => {
     if (clockIntervalId) {
       window.cancelAnimationFrame(clockIntervalId);
       clockIntervalId = null;
+    }
+  };
+
+  const showGameMode = () => {
+    if (experience) {
+      experience.classList.add("game-hidden");
+    }
+    if (gameMode) {
+      gameMode.classList.add("visible");
+      gameMode.classList.remove("hidden");
+    }
+  };
+
+  const hideGameMode = () => {
+    if (experience) {
+      experience.classList.remove("game-hidden");
+    }
+    if (gameMode) {
+      gameMode.classList.remove("visible");
+      gameMode.classList.add("hidden");
     }
   };
 
@@ -397,6 +420,10 @@ document.addEventListener("DOMContentLoaded", () => {
         formulaTooltip.style.opacity = "0";
         formulaTooltip.style.transform = "translateY(25px)";
       }
+
+      if (gameToggleButton) {
+        gameToggleButton.classList.add("visible");
+      }
     });
   }
 
@@ -429,6 +456,18 @@ document.addEventListener("DOMContentLoaded", () => {
     setGravityFactor(gravityFactor);
   } else {
     updateGravityDisplay(gravityFactor);
+  }
+
+  if (gameToggleButton) {
+    gameToggleButton.addEventListener("click", () => {
+      showGameMode();
+    });
+  }
+
+  if (backToTimefallButton) {
+    backToTimefallButton.addEventListener("click", () => {
+      hideGameMode();
+    });
   }
 
   handleResize();
