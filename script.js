@@ -41,7 +41,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const STAR_COUNT = 260;
   const ARRIVAL_SECONDS = 75;
   const END_PHASE_SECONDS = 12;
-  const ABSORB_DURATION_MS = 850;
+  const ABSORB_DURATION_MS = 1400;
 
   let gravityFactor = gravitySlider ? parseFloat(gravitySlider.value) : 0.8;
   gravityFactor = Number.isFinite(gravityFactor) ? gravityFactor : 0.8;
@@ -87,7 +87,10 @@ document.addEventListener("DOMContentLoaded", () => {
     absorbStart: { x: 0, y: 0 },
     shipScale: 1,
     cameraOffsetX: 0,
-    cameraOffsetY: 0
+    cameraOffsetY: 0,
+    shipTilt: 0,
+    shipTiltTarget: 0,
+    renderTime: 0
   };
 
   const formatTime = (date) => {
@@ -273,42 +276,166 @@ document.addEventListener("DOMContentLoaded", () => {
     const halfH = height / 2;
     const scale = game.shipScale || 1;
 
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.scale(scale, scale);
+    const t = game.renderTime / 1000;
+    const progress = game.pEase || 0;
+    const plunge = game.qEase || 0;
+    const moveX = (game.keys.has("ArrowLeft") ? -1 : 0) + (game.keys.has("ArrowRight") ? 1 : 0);
+    const moveY = (game.keys.has("ArrowUp") ? -1 : 0) + (game.keys.has("ArrowDown") ? 1 : 0);
 
-    const flameLength = halfH * (0.4 + Math.random() * 0.35);
+    // Shadow/depth cue
+    const shadowAlpha = 0.12 + progress * 0.22 + plunge * 0.18;
+    ctx.save();
+    ctx.translate(x + 4 * (moveX * 0.2 + plunge * 0.3), y + halfH * 0.9);
+    ctx.scale(scale, scale * 0.6);
+    ctx.fillStyle = `rgba(0, 0, 0, ${shadowAlpha})`;
     ctx.beginPath();
-    ctx.moveTo(0, halfH + flameLength);
-    ctx.lineTo(-halfW * 0.35, halfH * 0.7);
-    ctx.lineTo(halfW * 0.35, halfH * 0.7);
+    ctx.ellipse(0, 0, halfW * 0.9, halfH * 0.35, 0, 0, Math.PI * 2);
+    ctx.filter = "blur(6px)";
+    ctx.fill();
+    ctx.restore();
+
+    // Stress micro-jitter late game (render only)
+    let jitterX = 0;
+    let jitterY = 0;
+    if (progress > 0.75) {
+      const j = (progress - 0.75) / 0.25;
+      jitterX = (Math.random() - 0.5) * 2 * j;
+      jitterY = (Math.random() - 0.5) * 2 * j;
+    }
+
+    // Tilt target based on horizontal input
+    game.shipTiltTarget = moveX * 0.17 * Math.PI; // ~9.7deg
+    game.shipTilt += (game.shipTiltTarget - game.shipTilt) * 0.12;
+
+    const flameInput = Math.min(1, Math.abs(moveX) + Math.abs(moveY) * 0.6);
+    const flicker = 0.65 + 0.35 * Math.sin(t * 9 + Math.cos(t * 4));
+    const baseFlame = halfH * (0.5 + flameInput * 0.5 + progress * 0.4 + plunge * 0.8);
+    const flameLength = baseFlame * flicker * (1 - game.absorbing ? 1 : Math.max(0.2, 1 - game.absorbTimer / game.absorbDuration));
+
+    const innerColor = `rgba(${200 + plunge * 30}, ${240 - plunge * 40}, 255, ${0.65 + progress * 0.25})`;
+    const midColor = `rgba(${170 + plunge * 60}, ${210 - plunge * 50}, ${255 - plunge * 80}, ${0.45 + progress * 0.3})`;
+    const edgeColor = `rgba(${120 + plunge * 120}, ${180 - plunge * 60}, ${255 - plunge * 150}, ${0.18 + progress * 0.2})`;
+
+    ctx.save();
+    ctx.translate(x + jitterX, y + jitterY);
+    ctx.scale(scale, scale);
+    ctx.rotate(game.shipTilt);
+
+    // Hull base (rounded trapezoid)
+    ctx.shadowColor = `rgba(150, 220, 255, ${0.15 + progress * 0.35 + plunge * 0.25})`;
+    ctx.shadowBlur = 14 + progress * 12 + plunge * 10;
+    ctx.beginPath();
+    const hullTopWidth = halfW * 0.9;
+    const hullBottomWidth = halfW * 1.2;
+    const hullTopY = -halfH * 0.9;
+    const hullBottomY = halfH * 0.9;
+    ctx.moveTo(-hullTopWidth, hullTopY);
+    ctx.lineTo(hullTopWidth, hullTopY);
+    ctx.lineTo(hullBottomWidth, hullBottomY);
+    ctx.lineTo(-hullBottomWidth, hullBottomY);
     ctx.closePath();
-    const flameGradient = ctx.createLinearGradient(0, halfH, 0, halfH + flameLength);
-    flameGradient.addColorStop(0, "rgba(255, 180, 120, 0.9)");
-    flameGradient.addColorStop(1, "rgba(255, 120, 80, 0.2)");
-    ctx.fillStyle = flameGradient;
+    const hullGradient = ctx.createLinearGradient(0, hullTopY, 0, hullBottomY);
+    hullGradient.addColorStop(0, "rgba(150, 220, 255, 0.9)");
+    hullGradient.addColorStop(1, "rgba(90, 140, 200, 0.9)");
+    ctx.fillStyle = hullGradient;
     ctx.fill();
 
+    // Inner hull strip
     ctx.beginPath();
-    ctx.moveTo(0, -halfH);
-    ctx.lineTo(-halfW, halfH);
-    ctx.lineTo(halfW, halfH);
+    const stripInset = halfW * 0.2;
+    ctx.moveTo(-hullTopWidth + stripInset, hullTopY + halfH * 0.05);
+    ctx.lineTo(hullTopWidth - stripInset, hullTopY + halfH * 0.05);
+    ctx.lineTo(hullBottomWidth - stripInset * 0.8, hullBottomY - halfH * 0.12);
+    ctx.lineTo(-hullBottomWidth + stripInset * 0.8, hullBottomY - halfH * 0.12);
     ctx.closePath();
-    const bodyGradient = ctx.createLinearGradient(0, -halfH, 0, halfH);
-    bodyGradient.addColorStop(0, "rgba(111, 228, 255, 0.9)");
-    bodyGradient.addColorStop(1, "rgba(185, 149, 255, 0.85)");
-    ctx.fillStyle = bodyGradient;
+    const stripGradient = ctx.createLinearGradient(0, hullTopY, 0, hullBottomY);
+    stripGradient.addColorStop(0, "rgba(200, 240, 255, 0.35)");
+    stripGradient.addColorStop(1, "rgba(120, 170, 230, 0.2)");
+    ctx.fillStyle = stripGradient;
+    ctx.fill();
+
+    // Nose cap
+    ctx.beginPath();
+    ctx.moveTo(0, hullTopY - halfH * 0.25);
+    ctx.quadraticCurveTo(hullTopWidth * 0.6, hullTopY - halfH * 0.08, hullTopWidth * 0.35, hullTopY);
+    ctx.lineTo(-hullTopWidth * 0.35, hullTopY);
+    ctx.quadraticCurveTo(-hullTopWidth * 0.6, hullTopY - halfH * 0.08, 0, hullTopY - halfH * 0.25);
+    const noseGradient = ctx.createLinearGradient(0, hullTopY - halfH * 0.25, 0, hullTopY + halfH * 0.05);
+    noseGradient.addColorStop(0, "rgba(210, 240, 255, 0.95)");
+    noseGradient.addColorStop(1, "rgba(140, 200, 255, 0.8)");
+    ctx.fillStyle = noseGradient;
+    ctx.fill();
+
+    // Wings / stabilizers
+    const wingY = halfH * 0.35;
+    const wingX = hullBottomWidth * 1.05;
+    ctx.beginPath();
+    ctx.moveTo(wingX, wingY);
+    ctx.lineTo(wingX + halfW * 0.6, wingY + halfH * 0.1);
+    ctx.lineTo(wingX, wingY + halfH * 0.25);
+    ctx.closePath();
+    ctx.fillStyle = "rgba(120, 180, 240, 0.65)";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-wingX, wingY);
+    ctx.lineTo(-wingX - halfW * 0.6, wingY + halfH * 0.1);
+    ctx.lineTo(-wingX, wingY + halfH * 0.25);
+    ctx.closePath();
+    ctx.fillStyle = "rgba(120, 180, 240, 0.65)";
+    ctx.fill();
+
+    // Engine housing
+    ctx.save();
+    ctx.translate(0, hullBottomY);
+    const nozzleR = halfW * 0.32;
+    const nozzleGradient = ctx.createRadialGradient(0, 0, nozzleR * 0.25, 0, 0, nozzleR);
+    nozzleGradient.addColorStop(0, "rgba(10, 20, 35, 0.2)");
+    nozzleGradient.addColorStop(1, "rgba(10, 20, 35, 0.75)");
+    ctx.fillStyle = nozzleGradient;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, nozzleR * 1.05, nozzleR * 0.65, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Engine flame
+    ctx.beginPath();
+    ctx.moveTo(0, hullBottomY + flameLength);
+    ctx.lineTo(-halfW * 0.4, hullBottomY + halfH * 0.35);
+    ctx.lineTo(halfW * 0.4, hullBottomY + halfH * 0.35);
+    ctx.closePath();
+    const flameGradient = ctx.createLinearGradient(0, hullBottomY + halfH * 0.15, 0, hullBottomY + flameLength);
+    flameGradient.addColorStop(0, innerColor);
+    flameGradient.addColorStop(0.45, midColor);
+    flameGradient.addColorStop(1, edgeColor);
+    ctx.fillStyle = flameGradient;
+    ctx.shadowColor = `rgba(150, 220, 255, ${0.3 + progress * 0.4 + plunge * 0.3})`;
+    ctx.shadowBlur = 20 + progress * 10;
+    ctx.fill();
+
+    // Cockpit / canopy
+    ctx.beginPath();
+    ctx.ellipse(0, hullTopY + halfH * 0.25, halfW * 0.32, halfH * 0.22, 0, 0, Math.PI * 2);
+    const canopyGradient = ctx.createLinearGradient(0, hullTopY, 0, hullTopY + halfH * 0.5);
+    canopyGradient.addColorStop(0, "rgba(180, 240, 255, 0.9)");
+    canopyGradient.addColorStop(1, "rgba(90, 170, 210, 0.75)");
+    ctx.fillStyle = canopyGradient;
     ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
-    ctx.lineWidth = 2;
-    ctx.shadowColor = "rgba(111, 228, 255, 0.55)";
-    ctx.shadowBlur = 18;
+    ctx.lineWidth = 1;
     ctx.fill();
     ctx.stroke();
 
-    ctx.beginPath();
-    ctx.ellipse(0, halfH * 0.1, halfW * 0.45, halfH * 0.25, 0, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(5, 12, 22, 0.6)";
-    ctx.fill();
+    // Tiny sparks late game
+    if (progress > 0.75 && Math.random() < 0.15) {
+      ctx.save();
+      const sparkR = 1 + Math.random() * 1.5;
+      const sparkX = (Math.random() - 0.5) * halfW * 0.6;
+      const sparkY = halfH * 0.7 + Math.random() * halfH * 0.3;
+      ctx.fillStyle = `rgba(255, ${190 + Math.random() * 30}, ${120 + Math.random() * 40}, ${0.35 + plunge * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(sparkX, sparkY, sparkR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
 
     ctx.restore();
   };
@@ -360,6 +487,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     const ctx = game.ctx;
+    game.renderTime = renderTime;
     ctx.clearRect(0, 0, game.width, game.height);
 
     const maxShake = 10;
