@@ -39,6 +39,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const updateInterval = 100;
   const STAR_COUNT = 260;
+  const ARRIVAL_SECONDS = 75;
+  const END_PHASE_SECONDS = 12;
+  const ABSORB_DURATION_MS = 850;
 
   let gravityFactor = gravitySlider ? parseFloat(gravitySlider.value) : 0.8;
   gravityFactor = Number.isFinite(gravityFactor) ? gravityFactor : 0.8;
@@ -74,7 +77,17 @@ document.addEventListener("DOMContentLoaded", () => {
     spawnTimer: 0,
     spawnInterval: 900,
     shakeIntensity: 0,
-    rafId: null
+    rafId: null,
+    reachedHorizon: false,
+    pEase: 0,
+    qEase: 0,
+    absorbing: false,
+    absorbTimer: 0,
+    absorbDuration: ABSORB_DURATION_MS,
+    absorbStart: { x: 0, y: 0 },
+    shipScale: 1,
+    cameraOffsetX: 0,
+    cameraOffsetY: 0
   };
 
   const formatTime = (date) => {
@@ -85,7 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const MIN_SAFE_DILATION = 0.0005;
-  const T_RAMP = 65;
+  const T_RAMP = ARRIVAL_SECONDS;
 
   const formatHoursToHMS = (hours) => {
     if (!Number.isFinite(hours) || hours > 1e6) {
@@ -258,9 +271,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const ctx = game.ctx;
     const halfW = width / 2;
     const halfH = height / 2;
+    const scale = game.shipScale || 1;
 
     ctx.save();
     ctx.translate(x, y);
+    ctx.scale(scale, scale);
 
     const flameLength = halfH * (0.4 + Math.random() * 0.35);
     ctx.beginPath();
@@ -331,7 +346,8 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.textAlign = "center";
     ctx.fillStyle = "#f5faff";
     ctx.font = '600 26px "Orbitron", sans-serif';
-    ctx.fillText("You were torn apart by tidal forces", game.width / 2, game.height / 2 - 10);
+    const headline = game.reachedHorizon ? "The horizon takes you." : "You were torn apart by tidal forces";
+    ctx.fillText(headline, game.width / 2, game.height / 2 - 10);
 
     ctx.fillStyle = "rgba(111, 228, 255, 0.9)";
     ctx.font = '400 18px "Titillium Web", sans-serif';
@@ -339,7 +355,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.restore();
   };
 
-  const drawGameFrame = (forceOverlay = false) => {
+  const drawGameFrame = (forceOverlay = false, renderTime = 0) => {
     if (!game.ctx) {
       return;
     }
@@ -350,8 +366,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const sx = (Math.random() - 0.5) * maxShake * game.shakeIntensity;
     const sy = (Math.random() - 0.5) * maxShake * game.shakeIntensity;
     ctx.save();
-    ctx.translate(sx, sy);
+    ctx.translate(sx + game.cameraOffsetX, sy + game.cameraOffsetY);
 
+    drawBlackHole(ctx, game.width, game.height, game.pEase, game.qEase, renderTime / 1000);
     drawDebris();
     drawShip();
 
@@ -359,8 +376,11 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.textAlign = "left";
     ctx.fillStyle = "rgba(245, 250, 255, 0.8)";
     ctx.font = '600 14px "Orbitron", sans-serif';
-    ctx.fillText(`Time: ${Math.floor(game.survivalTime)}s`, 16, 26);
-    ctx.fillText(`Difficulty: ${(Math.round(game.progress * 100))}%`, 16, 46);
+    const remaining = Math.max(0, ARRIVAL_SECONDS - game.survivalTime);
+    const minutes = Math.floor(remaining / 60);
+    const seconds = Math.floor(remaining % 60);
+    const pad = (v) => String(v).padStart(2, "0");
+    ctx.fillText(`Arrival in: ${pad(minutes)}:${pad(seconds)}`, 16, 26);
     ctx.restore();
 
     ctx.restore();
@@ -398,16 +418,90 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const lerp = (a, b, t) => a + (b - a) * t;
   const randRange = (min, max) => min + Math.random() * (max - min);
+  const clamp01 = (value) => Math.min(Math.max(value, 0), 1);
+  const easeInOut = (x) => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
+
+  const drawBlackHole = (ctx, width, height, pEase, qEase, timeSeconds) => {
+    const eased = clamp01(pEase);
+    const plunge = clamp01(qEase);
+    const cx = width * 0.5;
+    const cy = height * 0.38;
+    const base = Math.min(width, height);
+    const rStart = base * 0.03;
+    const rEnd = base * 0.14;
+    const rBoost = base * 0.08;
+    const baseR = lerp(rStart, rEnd, eased);
+    const radius = baseR + lerp(0, rBoost, plunge * plunge);
+    const t = timeSeconds || 0;
+    const swirlSpeed = 0.5 + eased * 1.4 + plunge * 2.2;
+    const emberFactor = Math.max(0, (eased - 0.65) / 0.35 + plunge * 0.6);
+
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    const coreGradient = ctx.createRadialGradient(0, 0, radius * 0.1, 0, 0, radius * 0.9);
+    coreGradient.addColorStop(0, "rgba(0, 0, 0, 0.95)");
+    coreGradient.addColorStop(1, "rgba(0, 0, 0, 0.2)");
+    ctx.fillStyle = coreGradient;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius * 0.95, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.globalCompositeOperation = "lighter";
+    const ringGradient = ctx.createRadialGradient(0, 0, radius * 0.7, 0, 0, radius * 1.25 + plunge * 8);
+    ringGradient.addColorStop(0, `rgba(120, 190, 255, ${0.18 + eased * 0.22 + plunge * 0.2})`);
+    ringGradient.addColorStop(1, `rgba(70, 110, 180, ${0.08 + eased * 0.12 + plunge * 0.1})`);
+    ctx.fillStyle = ringGradient;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius * 1.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    const swirlCount = 5;
+    for (let i = 0; i < swirlCount; i += 1) {
+      const angle = t * swirlSpeed + (Math.PI * 2 * i) / swirlCount;
+      const innerR = radius * 0.72;
+      const outerR = radius * (1.15 + Math.sin(t * 0.6 + i) * 0.03);
+      const alpha = 0.12 + eased * 0.24 + plunge * 0.18;
+      const emberAlpha = emberFactor * 0.25;
+      ctx.save();
+      ctx.rotate(angle);
+      ctx.beginPath();
+      ctx.strokeStyle = `rgba(${150 + emberFactor * 80}, ${220 - emberFactor * 40}, ${255 - emberFactor * 120}, ${alpha})`;
+      ctx.lineWidth = 2 + eased * 3;
+      ctx.arc(0, 0, (innerR + outerR) / 2, -0.6, 0.6);
+      ctx.stroke();
+      if (emberAlpha > 0) {
+        ctx.beginPath();
+        ctx.strokeStyle = `rgba(255, ${170 + emberFactor * 70}, ${120}, ${emberAlpha})`;
+        ctx.lineWidth = 1.5 + eased * 2;
+        ctx.arc(0, 0, outerR, -0.35, 0.35);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    const vignetteAlpha = Math.min(0.2, 0.05 + eased * 0.12 + plunge * 0.2);
+    const vignette = ctx.createRadialGradient(0, 0, radius * 0.4, 0, 0, radius * 2.4);
+    vignette.addColorStop(0, "rgba(0, 0, 0, 0)");
+    vignette.addColorStop(1, `rgba(0, 0, 0, ${vignetteAlpha})`);
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = vignette;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius * 2.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  };
 
   const spawnDebrisWithParams = (baseSpeed, difficulty, count = 1) => {
-    const shipSafeMin = game.ship ? game.ship.x - 60 : null;
-    const shipSafeMax = game.ship ? game.ship.x + 60 : null;
+    const shipSafeMin = game.ship ? game.ship.x - 70 : null;
+    const shipSafeMax = game.ship ? game.ship.x + 70 : null;
     for (let i = 0; i < count; i += 1) {
       const radius = Math.random() * 16 + 10;
       let x = Math.random() * game.width;
       if (shipSafeMin !== null && shipSafeMax !== null) {
         let attempts = 0;
-        while (x > shipSafeMin && x < shipSafeMax && attempts < 6) {
+        while (x > shipSafeMin && x < shipSafeMax && attempts < 8) {
           x = Math.random() * game.width;
           attempts += 1;
         }
@@ -421,9 +515,9 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const updateDebris = (dt, difficulty) => {
-    const spawnInterval = lerp(820, 160, difficulty);
-    const maxDebris = Math.floor(lerp(14, 48, difficulty));
-    const baseSpeed = lerp(150, 650, difficulty);
+    const spawnInterval = lerp(850, 110, difficulty);
+    const maxDebris = Math.floor(lerp(16, 72, difficulty));
+    const baseSpeed = lerp(180, 800, difficulty);
 
     game.spawnTimer += dt * 1000;
     while (game.spawnTimer >= spawnInterval) {
@@ -432,11 +526,16 @@ document.addEventListener("DOMContentLoaded", () => {
         break;
       }
       let clusterCount = 1;
-      if (difficulty > 0.45 && Math.random() < 0.3) {
+      if (difficulty > 0.55 && Math.random() < 0.5) {
         clusterCount = 2;
       }
-      if (difficulty > 0.7 && Math.random() < 0.15) {
-        clusterCount = 3;
+      if (difficulty > 0.8) {
+        if (Math.random() < 0.7) {
+          clusterCount = 2;
+        }
+        if (Math.random() < 0.28) {
+          clusterCount = 3;
+        }
       }
       spawnDebrisWithParams(baseSpeed, difficulty, clusterCount);
       game.spawnTimer -= spawnInterval;
@@ -485,20 +584,60 @@ document.addEventListener("DOMContentLoaded", () => {
 
     game.survivalTime += dt;
     const p = Math.min(1, game.survivalTime / T_RAMP);
-    const easeInOut = (x) => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
+    const endPhaseStart = ARRIVAL_SECONDS - END_PHASE_SECONDS;
+    const qRaw = (game.survivalTime - endPhaseStart) / END_PHASE_SECONDS;
+    const q = Math.min(Math.max(qRaw, 0), 1);
     const d = easeInOut(p);
+    const qEase = q * q;
     game.progress = d;
-    game.shakeIntensity = d;
+    game.pEase = d;
+    game.qEase = qEase;
+    game.shakeIntensity = d * 0.9 + qEase * 0.5;
 
-    updateShip(dt);
-    updateDebris(dt, d);
-    checkCollisions();
+    const bhx = game.width * 0.5;
+    const bhy = game.height * 0.38;
+    const pullStrength = qEase * 18;
+    game.cameraOffsetX = ((bhx - game.width / 2) / game.width) * pullStrength;
+    game.cameraOffsetY = ((bhy - game.height / 2) / game.height) * pullStrength;
+
+    if (!game.absorbing && game.survivalTime >= ARRIVAL_SECONDS) {
+      game.absorbing = true;
+      game.absorbTimer = 0;
+      game.absorbStart = { x: game.ship.x, y: game.ship.y };
+      game.survivalTime = ARRIVAL_SECONDS;
+    }
+
+    if (game.absorbing) {
+      game.absorbTimer += deltaMs;
+      const progress = Math.min(1, game.absorbTimer / game.absorbDuration);
+      game.shipScale = 1 - 0.45 * progress;
+      const targetX = bhx;
+      const targetY = bhy;
+      game.ship.x = lerp(game.absorbStart.x, targetX, progress);
+      game.ship.y = lerp(game.absorbStart.y, targetY, progress);
+      game.debris.forEach((rock) => {
+        rock.y += rock.speed * dt;
+        rock.x += Math.sin(rock.angle) * 18 * dt;
+        rock.angle += rock.spin * dt;
+      });
+      if (progress >= 1) {
+        game.reachedHorizon = true;
+        game.over = true;
+        game.running = false;
+        drawGameFrame(true, timestamp);
+        return;
+      }
+    } else {
+      updateShip(dt);
+      updateDebris(dt, d);
+      checkCollisions();
+    }
 
     if (game.running) {
-      drawGameFrame();
+      drawGameFrame(false, timestamp);
       game.rafId = window.requestAnimationFrame(gameLoop);
     } else if (game.over) {
-      drawGameFrame(true);
+      drawGameFrame(true, timestamp);
     }
   };
 
@@ -516,9 +655,17 @@ document.addEventListener("DOMContentLoaded", () => {
     game.lastTimestamp = 0;
     game.shakeIntensity = 0;
     game.over = false;
+    game.reachedHorizon = false;
+    game.absorbing = false;
+    game.absorbTimer = 0;
+    game.absorbDuration = ABSORB_DURATION_MS;
+    game.absorbStart = { x: 0, y: 0 };
+    game.shipScale = 1;
+    game.cameraOffsetX = 0;
+    game.cameraOffsetY = 0;
     game.running = true;
     attachGameListeners();
-    drawGameFrame();
+    drawGameFrame(false, performance.now());
     game.rafId = window.requestAnimationFrame(gameLoop);
   }
 
@@ -529,6 +676,14 @@ document.addEventListener("DOMContentLoaded", () => {
       game.rafId = null;
     }
     game.over = false;
+    game.reachedHorizon = false;
+    game.absorbing = false;
+    game.absorbTimer = 0;
+    game.absorbDuration = ABSORB_DURATION_MS;
+    game.absorbStart = { x: 0, y: 0 };
+    game.shipScale = 1;
+    game.cameraOffsetX = 0;
+    game.cameraOffsetY = 0;
     detachGameListeners();
     game.debris = [];
   }

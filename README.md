@@ -11,6 +11,7 @@ An immersive, browser-based journey into gravitational time dilation inspired by
 - **Time Differential Panel** – Learn how much extra time passes for a distant observer when an hour slips by near the black hole.
 - **Animated Space Backdrop** – A canvas-powered starfield and gravitational lensing effect create a cinematic feel.
 - **Gravity-Reactive Visuals** – The starfield drift and lensing ring motion subtly speed up or slow down as you adjust gravity.
+- **Black Hole Run** – A fullscreen dodge-the-debris mini-game with a growing, swirling black hole that pulls you in by the end of the countdown.
 - **Rotating Quotes** – Every few seconds a new science or sci-fi quote appears, keeping the narrative alive.
 
 ---
@@ -39,6 +40,7 @@ An immersive, browser-based journey into gravitational time dilation inspired by
 | **Begin** button | Reveals the experience and starts the ambient audio (if present). |
 | **Gravitational Pull slider** | Adjusts the gravity factor between 0.10 and 1.00. The singularity clock and differential panel update instantly. |
 | **Hover on “Near the Singularity” card** | A tooltip explains the time dilation formula. |
+| **Try to reach the black hole** | Opens the dodge-the-debris game mode (arrow keys to move, Space/Play Again to restart, Back to Timefall to exit). |
 
 ---
 
@@ -68,6 +70,7 @@ An immersive, browser-based journey into gravitational time dilation inspired by
 - Uses `requestAnimationFrame` for smooth starfield and lensing animations.
 - Time dilation uses the simplified formula `Δt' = Δt × √(1 - gravityFactor)`.
 - The differential panel converts the gravity factor into an Earth-time ratio and displays it in hours, minutes, and seconds.
+- The optional game mode uses the same canvas to render a growing black hole, debris fields, and a countdown-driven difficulty ramp.
 
 ---
 
