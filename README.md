@@ -12,6 +12,7 @@ An immersive, browser-based journey into gravitational time dilation inspired by
 - **Animated Space Backdrop** – A canvas-powered starfield and gravitational lensing effect create a cinematic feel.
 - **Gravity-Reactive Visuals** – The starfield drift and lensing ring motion subtly speed up or slow down as you adjust gravity.
 - **Black Hole Run** – A fullscreen dodge-the-debris mini-game with a growing, swirling black hole that pulls you in by the end of the countdown.
+- **Procedural Spacecraft & Debris** – The interceptor and falling debris are fully canvas-drawn with layered hulls, glowing engines, and varied space junk silhouettes.
 - **Rotating Quotes** – Every few seconds a new science or sci-fi quote appears, keeping the narrative alive.
 
 ---

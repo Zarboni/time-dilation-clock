@@ -90,7 +90,19 @@ document.addEventListener("DOMContentLoaded", () => {
     cameraOffsetY: 0,
     shipTilt: 0,
     shipTiltTarget: 0,
-    renderTime: 0
+    renderTime: 0,
+    failureMessages: [
+      "The event horizon has been reached.",
+      "Causal contact is no longer possible.",
+      "Information cannot escape this region."
+    ],
+    lastFailureMessage: null,
+    arrivalMessages: [
+      "The event horizon has been reached.",
+      "Causal contact is no longer possible.",
+      "Information cannot escape this region."
+    ],
+    lastArrivalMessage: null
   };
 
   const formatTime = (date) => {
@@ -321,89 +333,146 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.scale(scale, scale);
     ctx.rotate(game.shipTilt);
 
-    // Hull base (rounded trapezoid)
+    // Hull base: elongated, tapered interceptor body
     ctx.shadowColor = `rgba(150, 220, 255, ${0.15 + progress * 0.35 + plunge * 0.25})`;
     ctx.shadowBlur = 14 + progress * 12 + plunge * 10;
+    const hullTopWidth = halfW * 0.7;
+    const hullMidWidth = halfW * 1.35;
+    const hullRearWidth = halfW * 1.1;
+    const hullNoseY = -halfH * 1.2;
+    const hullMidY = halfH * 0.05;
+    const hullRearY = halfH * 0.95;
     ctx.beginPath();
-    const hullTopWidth = halfW * 0.9;
-    const hullBottomWidth = halfW * 1.2;
-    const hullTopY = -halfH * 0.9;
-    const hullBottomY = halfH * 0.9;
-    ctx.moveTo(-hullTopWidth, hullTopY);
-    ctx.lineTo(hullTopWidth, hullTopY);
-    ctx.lineTo(hullBottomWidth, hullBottomY);
-    ctx.lineTo(-hullBottomWidth, hullBottomY);
+    ctx.moveTo(0, hullNoseY);
+    ctx.lineTo(hullTopWidth, hullNoseY + halfH * 0.35);
+    ctx.lineTo(hullMidWidth, hullMidY);
+    ctx.lineTo(hullRearWidth, hullRearY);
+    ctx.lineTo(-hullRearWidth, hullRearY);
+    ctx.lineTo(-hullMidWidth, hullMidY);
+    ctx.lineTo(-hullTopWidth, hullNoseY + halfH * 0.35);
     ctx.closePath();
-    const hullGradient = ctx.createLinearGradient(0, hullTopY, 0, hullBottomY);
-    hullGradient.addColorStop(0, "rgba(150, 220, 255, 0.9)");
-    hullGradient.addColorStop(1, "rgba(90, 140, 200, 0.9)");
+    const hullGradient = ctx.createLinearGradient(0, hullNoseY, 0, hullRearY);
+    hullGradient.addColorStop(0, "rgba(80, 120, 170, 0.95)");
+    hullGradient.addColorStop(1, "rgba(40, 70, 110, 0.9)");
     ctx.fillStyle = hullGradient;
     ctx.fill();
 
-    // Inner hull strip
+    // Central spine
     ctx.beginPath();
-    const stripInset = halfW * 0.2;
-    ctx.moveTo(-hullTopWidth + stripInset, hullTopY + halfH * 0.05);
-    ctx.lineTo(hullTopWidth - stripInset, hullTopY + halfH * 0.05);
-    ctx.lineTo(hullBottomWidth - stripInset * 0.8, hullBottomY - halfH * 0.12);
-    ctx.lineTo(-hullBottomWidth + stripInset * 0.8, hullBottomY - halfH * 0.12);
+    ctx.moveTo(0, hullNoseY);
+    ctx.lineTo(hullTopWidth * 0.42, hullNoseY + halfH * 0.42);
+    ctx.lineTo(hullMidWidth * 0.4, hullMidY);
+    ctx.lineTo(hullRearWidth * 0.32, hullRearY - halfH * 0.1);
+    ctx.lineTo(-hullRearWidth * 0.32, hullRearY - halfH * 0.1);
+    ctx.lineTo(-hullMidWidth * 0.4, hullMidY);
+    ctx.lineTo(-hullTopWidth * 0.42, hullNoseY + halfH * 0.42);
     ctx.closePath();
-    const stripGradient = ctx.createLinearGradient(0, hullTopY, 0, hullBottomY);
-    stripGradient.addColorStop(0, "rgba(200, 240, 255, 0.35)");
-    stripGradient.addColorStop(1, "rgba(120, 170, 230, 0.2)");
-    ctx.fillStyle = stripGradient;
+    const spineGradient = ctx.createLinearGradient(0, hullNoseY, 0, hullRearY);
+    spineGradient.addColorStop(0, "rgba(180, 220, 255, 0.65)");
+    spineGradient.addColorStop(1, "rgba(90, 140, 200, 0.3)");
+    ctx.fillStyle = spineGradient;
     ctx.fill();
+
+    // Warm accent strips
+    const accentAlpha = 0.18 + plunge * 0.2;
+    ctx.strokeStyle = `rgba(255, 180, 100, ${accentAlpha})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-hullMidWidth * 0.75, hullMidY - halfH * 0.15);
+    ctx.lineTo(-hullRearWidth * 0.85, hullRearY - halfH * 0.08);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(hullMidWidth * 0.75, hullMidY - halfH * 0.15);
+    ctx.lineTo(hullRearWidth * 0.85, hullRearY - halfH * 0.08);
+    ctx.stroke();
 
     // Nose cap
     ctx.beginPath();
-    ctx.moveTo(0, hullTopY - halfH * 0.25);
-    ctx.quadraticCurveTo(hullTopWidth * 0.6, hullTopY - halfH * 0.08, hullTopWidth * 0.35, hullTopY);
-    ctx.lineTo(-hullTopWidth * 0.35, hullTopY);
-    ctx.quadraticCurveTo(-hullTopWidth * 0.6, hullTopY - halfH * 0.08, 0, hullTopY - halfH * 0.25);
-    const noseGradient = ctx.createLinearGradient(0, hullTopY - halfH * 0.25, 0, hullTopY + halfH * 0.05);
-    noseGradient.addColorStop(0, "rgba(210, 240, 255, 0.95)");
-    noseGradient.addColorStop(1, "rgba(140, 200, 255, 0.8)");
+    ctx.moveTo(0, hullNoseY - halfH * 0.15);
+    ctx.quadraticCurveTo(hullTopWidth * 0.55, hullNoseY + halfH * 0.05, hullTopWidth * 0.32, hullNoseY + halfH * 0.38);
+    ctx.lineTo(-hullTopWidth * 0.32, hullNoseY + halfH * 0.38);
+    ctx.quadraticCurveTo(-hullTopWidth * 0.55, hullNoseY + halfH * 0.05, 0, hullNoseY - halfH * 0.15);
+    const noseGradient = ctx.createLinearGradient(0, hullNoseY - halfH * 0.2, 0, hullNoseY + halfH * 0.4);
+    noseGradient.addColorStop(0, "rgba(190, 230, 255, 0.95)");
+    noseGradient.addColorStop(1, "rgba(120, 180, 230, 0.8)");
     ctx.fillStyle = noseGradient;
     ctx.fill();
 
-    // Wings / stabilizers
-    const wingY = halfH * 0.35;
-    const wingX = hullBottomWidth * 1.05;
+    // Wings / stabilizers (compact intakes)
+    const wingY = hullMidY + halfH * 0.05;
+    const wingX = hullMidWidth * 0.9;
     ctx.beginPath();
     ctx.moveTo(wingX, wingY);
-    ctx.lineTo(wingX + halfW * 0.6, wingY + halfH * 0.1);
-    ctx.lineTo(wingX, wingY + halfH * 0.25);
+    ctx.lineTo(wingX + halfW * 0.55, wingY + halfH * 0.12);
+    ctx.lineTo(wingX, wingY + halfH * 0.32);
+    ctx.lineTo(wingX - halfW * 0.2, wingY + halfH * 0.1);
     ctx.closePath();
-    ctx.fillStyle = "rgba(120, 180, 240, 0.65)";
+    ctx.fillStyle = "rgba(90, 140, 200, 0.75)";
     ctx.fill();
     ctx.beginPath();
     ctx.moveTo(-wingX, wingY);
-    ctx.lineTo(-wingX - halfW * 0.6, wingY + halfH * 0.1);
-    ctx.lineTo(-wingX, wingY + halfH * 0.25);
+    ctx.lineTo(-wingX - halfW * 0.55, wingY + halfH * 0.12);
+    ctx.lineTo(-wingX, wingY + halfH * 0.32);
+    ctx.lineTo(-wingX + halfW * 0.2, wingY + halfH * 0.1);
     ctx.closePath();
-    ctx.fillStyle = "rgba(120, 180, 240, 0.65)";
+    ctx.fillStyle = "rgba(90, 140, 200, 0.75)";
     ctx.fill();
 
-    // Engine housing
-    ctx.save();
-    ctx.translate(0, hullBottomY);
-    const nozzleR = halfW * 0.32;
-    const nozzleGradient = ctx.createRadialGradient(0, 0, nozzleR * 0.25, 0, 0, nozzleR);
-    nozzleGradient.addColorStop(0, "rgba(10, 20, 35, 0.2)");
-    nozzleGradient.addColorStop(1, "rgba(10, 20, 35, 0.75)");
-    ctx.fillStyle = nozzleGradient;
+    // Cockpit / canopy
     ctx.beginPath();
-    ctx.ellipse(0, 0, nozzleR * 1.05, nozzleR * 0.65, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, hullNoseY + halfH * 0.55, halfW * 0.32, halfH * 0.2, 0, 0, Math.PI * 2);
+    const canopyGradient = ctx.createLinearGradient(0, hullNoseY + halfH * 0.35, 0, hullNoseY + halfH * 0.75);
+    canopyGradient.addColorStop(0, "rgba(120, 200, 230, 0.9)");
+    canopyGradient.addColorStop(1, "rgba(50, 90, 140, 0.85)");
+    ctx.fillStyle = canopyGradient;
+    ctx.strokeStyle = "rgba(200, 240, 255, 0.45)";
+    ctx.lineWidth = 1;
     ctx.fill();
+    ctx.stroke();
+
+    // Engine housings (triple cluster)
+    ctx.save();
+    ctx.translate(0, hullRearY - halfH * 0.05);
+    const nozzleR = halfW * 0.3;
+    const nozzleGlow = 0.35 + progress * 0.3 + plunge * 0.35;
+    const nozzlePositions = [
+      { x: -nozzleR * 0.9, y: 0 },
+      { x: nozzleR * 0.9, y: 0 },
+      { x: 0, y: nozzleR * 0.35 }
+    ];
+    nozzlePositions.forEach((pos) => {
+      ctx.save();
+      ctx.translate(pos.x, pos.y);
+      const nozzleGradient = ctx.createRadialGradient(0, 0, nozzleR * 0.15, 0, 0, nozzleR);
+      nozzleGradient.addColorStop(0, "rgba(10, 20, 35, 0.15)");
+      nozzleGradient.addColorStop(1, "rgba(10, 20, 35, 0.8)");
+      ctx.fillStyle = nozzleGradient;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, nozzleR * 1.05, nozzleR * 0.65, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Engine core glow
+      const glowR = nozzleR * 0.6;
+      const glowGradient = ctx.createRadialGradient(0, 0, glowR * 0.2, 0, 0, glowR);
+      glowGradient.addColorStop(0, `rgba(180, 230, 255, ${0.65 + nozzleGlow * 0.3})`);
+      glowGradient.addColorStop(1, `rgba(80, 150, 220, ${0.05 + nozzleGlow * 0.25})`);
+      ctx.globalCompositeOperation = "lighter";
+      ctx.fillStyle = glowGradient;
+      ctx.beginPath();
+      ctx.arc(0, 0, glowR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalCompositeOperation = "source-over";
+      ctx.restore();
+    });
     ctx.restore();
 
-    // Engine flame
+    // Engine flame (central exhaust)
     ctx.beginPath();
-    ctx.moveTo(0, hullBottomY + flameLength);
-    ctx.lineTo(-halfW * 0.4, hullBottomY + halfH * 0.35);
-    ctx.lineTo(halfW * 0.4, hullBottomY + halfH * 0.35);
+    ctx.moveTo(0, hullRearY + flameLength);
+    ctx.lineTo(-halfW * 0.38, hullRearY + halfH * 0.35);
+    ctx.lineTo(halfW * 0.38, hullRearY + halfH * 0.35);
     ctx.closePath();
-    const flameGradient = ctx.createLinearGradient(0, hullBottomY + halfH * 0.15, 0, hullBottomY + flameLength);
+    const flameGradient = ctx.createLinearGradient(0, hullRearY + halfH * 0.15, 0, hullRearY + flameLength);
     flameGradient.addColorStop(0, innerColor);
     flameGradient.addColorStop(0.45, midColor);
     flameGradient.addColorStop(1, edgeColor);
@@ -411,18 +480,6 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.shadowColor = `rgba(150, 220, 255, ${0.3 + progress * 0.4 + plunge * 0.3})`;
     ctx.shadowBlur = 20 + progress * 10;
     ctx.fill();
-
-    // Cockpit / canopy
-    ctx.beginPath();
-    ctx.ellipse(0, hullTopY + halfH * 0.25, halfW * 0.32, halfH * 0.22, 0, 0, Math.PI * 2);
-    const canopyGradient = ctx.createLinearGradient(0, hullTopY, 0, hullTopY + halfH * 0.5);
-    canopyGradient.addColorStop(0, "rgba(180, 240, 255, 0.9)");
-    canopyGradient.addColorStop(1, "rgba(90, 170, 210, 0.75)");
-    ctx.fillStyle = canopyGradient;
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
-    ctx.lineWidth = 1;
-    ctx.fill();
-    ctx.stroke();
 
     // Tiny sparks late game
     if (progress > 0.75 && Math.random() < 0.15) {
@@ -449,14 +506,70 @@ document.addEventListener("DOMContentLoaded", () => {
       ctx.save();
       ctx.translate(rock.x, rock.y);
       ctx.rotate(rock.angle);
-      const gradient = ctx.createRadialGradient(0, 0, rock.radius * 0.2, 0, 0, rock.radius);
-      gradient.addColorStop(0, "rgba(200, 235, 255, 0.9)");
-      gradient.addColorStop(0.4, "rgba(160, 200, 230, 0.6)");
-      gradient.addColorStop(1, "rgba(60, 90, 130, 0.5)");
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.arc(0, 0, rock.radius, 0, Math.PI * 2);
-      ctx.fill();
+
+      const { palette = {}, type, vertices, radius } = rock;
+      const base = palette.base || "rgba(120, 150, 180, 0.9)";
+      const highlight = palette.highlight || "rgba(190, 220, 255, 0.6)";
+      const rim = palette.rim || "rgba(120, 200, 255, 0.25)";
+      const accent = palette.accent || "rgba(255, 170, 120, 0.12)";
+
+      if (vertices && vertices.length) {
+        ctx.beginPath();
+        ctx.moveTo(vertices[0].x, vertices[0].y);
+        for (let i = 1; i < vertices.length; i += 1) {
+          ctx.lineTo(vertices[i].x, vertices[i].y);
+        }
+        ctx.closePath();
+
+        // Fill based on type
+        if (type === "metal") {
+          const grad = ctx.createLinearGradient(-radius, -radius, radius, radius);
+          grad.addColorStop(0, base);
+          grad.addColorStop(0.6, highlight);
+          grad.addColorStop(1, base);
+          ctx.fillStyle = grad;
+          ctx.fill();
+          ctx.strokeStyle = rim;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          if (Math.random() < 0.15) {
+            ctx.strokeStyle = accent;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(-radius * 0.4, 0);
+            ctx.lineTo(radius * 0.4, radius * 0.1);
+            ctx.stroke();
+          }
+        } else if (type === "rock") {
+          const grad = ctx.createRadialGradient(0, 0, radius * 0.1, 0, 0, radius);
+          grad.addColorStop(0, base);
+          grad.addColorStop(1, palette.rim || "rgba(30,30,35,0.7)");
+          ctx.fillStyle = grad;
+          ctx.fill();
+          ctx.strokeStyle = "rgba(20, 20, 25, 0.35)";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        } else if (type === "panel") {
+          const grad = ctx.createLinearGradient(-radius, 0, radius, 0);
+          grad.addColorStop(0, base);
+          grad.addColorStop(1, highlight);
+          ctx.fillStyle = grad;
+          ctx.fill();
+          ctx.strokeStyle = rim;
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+          // panel seams
+          ctx.strokeStyle = "rgba(255,255,255,0.18)";
+          ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          ctx.moveTo(-radius * 0.5, 0);
+          ctx.lineTo(radius * 0.5, radius * 0.08);
+          ctx.moveTo(0, -radius * 0.4);
+          ctx.lineTo(0, radius * 0.35);
+          ctx.stroke();
+        }
+      }
+
       ctx.restore();
     });
   };
@@ -473,7 +586,9 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.textAlign = "center";
     ctx.fillStyle = "#f5faff";
     ctx.font = '600 26px "Orbitron", sans-serif';
-    const headline = game.reachedHorizon ? "The horizon takes you." : "You were torn apart by tidal forces";
+    const headline = game.reachedHorizon
+      ? game.lastArrivalMessage || "The event horizon has been reached."
+      : game.lastFailureMessage || "You were torn apart by tidal forces";
     ctx.fillText(headline, game.width / 2, game.height / 2 - 10);
 
     ctx.fillStyle = "rgba(111, 228, 255, 0.9)";
@@ -521,6 +636,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const triggerGameOver = () => {
     game.over = true;
     game.running = false;
+    if (!game.reachedHorizon) {
+      const options = game.failureMessages || [];
+      if (options.length) {
+        const pick = options[Math.floor(Math.random() * options.length)];
+        game.lastFailureMessage = pick;
+      }
+    }
     if (game.rafId) {
       window.cancelAnimationFrame(game.rafId);
       game.rafId = null;
@@ -624,21 +746,120 @@ document.addEventListener("DOMContentLoaded", () => {
   const spawnDebrisWithParams = (baseSpeed, difficulty, count = 1) => {
     const shipSafeMin = game.ship ? game.ship.x - 70 : null;
     const shipSafeMax = game.ship ? game.ship.x + 70 : null;
-    for (let i = 0; i < count; i += 1) {
-      const radius = Math.random() * 16 + 10;
-      let x = Math.random() * game.width;
+    const chooseType = () => {
+      const r = Math.random();
+      if (r < 0.45) return "metal";
+      if (r < 0.7) return "rock";
+      return "panel";
+    };
+
+    const chooseSize = () => {
+      const r = Math.random();
+      if (r < 0.25) return "small";
+      if (r < 0.85) return "medium";
+      return "large";
+    };
+
+    const makePalette = (type) => {
+      if (type === "metal") {
+        return {
+          base: "rgba(90, 120, 150, 0.95)",
+          highlight: "rgba(170, 210, 240, 0.8)",
+          rim: "rgba(120, 200, 255, 0.35)",
+          accent: "rgba(255, 170, 110, 0.15)"
+        };
+      }
+      if (type === "rock") {
+        return {
+          base: "rgba(70, 70, 80, 0.95)",
+          highlight: "rgba(120, 120, 130, 0.35)",
+          rim: "rgba(40, 40, 45, 0.4)",
+          accent: "rgba(120, 80, 50, 0.08)"
+        };
+      }
+      return {
+        base: "rgba(80, 110, 150, 0.9)",
+        highlight: "rgba(150, 190, 230, 0.35)",
+        rim: "rgba(120, 180, 240, 0.4)",
+        accent: "rgba(255, 180, 120, 0.12)"
+      };
+    };
+
+    const makePolygon = (radius, variance, vertexCount) => {
+      const verts = [];
+      for (let i = 0; i < vertexCount; i += 1) {
+        const angle = (Math.PI * 2 * i) / vertexCount + Math.random() * 0.25;
+        const r = radius * (1 - variance + Math.random() * variance * 2);
+        verts.push({ x: Math.cos(angle) * r, y: Math.sin(angle) * r });
+      }
+      return verts;
+    };
+
+    const makePanelShape = (radius) => {
+      const w = radius * (1.6 + Math.random() * 0.4);
+      const h = radius * (0.9 + Math.random() * 0.3);
+      const skew = 0.15 + Math.random() * 0.1;
+      return [
+        { x: -w * 0.5, y: -h * 0.5 },
+        { x: w * 0.5, y: -h * 0.5 + skew * h },
+        { x: w * 0.55, y: h * 0.5 },
+        { x: -w * 0.55, y: h * 0.5 - skew * h }
+      ];
+    };
+
+    const spawnOne = (typeOverride = null, sizeOverride = null, offset = { x: 0, y: 0 }, speedJitter = 1) => {
+      const type = typeOverride || chooseType();
+      const size = sizeOverride || chooseSize();
+      const sizeScale = size === "small" ? 0.6 : size === "medium" ? 1 : 1.35;
+      const baseRadius = (Math.random() * 10 + 14) * sizeScale;
+
+      let x = Math.random() * game.width + offset.x;
       if (shipSafeMin !== null && shipSafeMax !== null) {
         let attempts = 0;
         while (x > shipSafeMin && x < shipSafeMax && attempts < 8) {
-          x = Math.random() * game.width;
+          x = Math.random() * game.width + offset.x;
           attempts += 1;
         }
       }
-      const y = -radius * 2;
-      const speed = baseSpeed * randRange(0.85, 1.15);
-      const spin = (Math.random() - 0.5) * 2.5;
+      const y = -baseRadius * 2 + offset.y;
+      const speed = baseSpeed * randRange(0.85, 1.15) * speedJitter;
+      const spin = (Math.random() - 0.5) * (size === "large" ? 1.6 : size === "small" ? 3.2 : 2.2);
       const angle = Math.random() * Math.PI * 2;
-      game.debris.push({ x, y, radius, speed, spin, angle });
+      const palette = makePalette(type);
+      let vertices;
+      if (type === "panel") {
+        vertices = makePanelShape(baseRadius);
+      } else {
+        const verts = type === "rock" ? 6 + Math.floor(Math.random() * 3) : 5 + Math.floor(Math.random() * 4);
+        vertices = makePolygon(baseRadius, type === "rock" ? 0.28 : 0.18, verts);
+      }
+
+      game.debris.push({
+        x,
+        y,
+        radius: baseRadius,
+        speed,
+        spin,
+        angle,
+        type,
+        size,
+        vertices,
+        palette
+      });
+    };
+
+    for (let i = 0; i < count; i += 1) {
+      spawnOne();
+      // Occasionally add a shard cluster trailing the main piece.
+      if (Math.random() < 0.25) {
+        const shardCount = 3 + Math.floor(Math.random() * 6);
+        const shardType = chooseType();
+        const baseOffsetX = (Math.random() - 0.5) * 40;
+        const baseOffsetY = (Math.random() - 0.5) * 20;
+        for (let s = 0; s < shardCount; s += 1) {
+          spawnOne(shardType, "small", { x: baseOffsetX + (Math.random() - 0.5) * 30, y: baseOffsetY + (Math.random() - 0.5) * 20 }, 1 + Math.random() * 0.2);
+        }
+      }
     }
   };
 
@@ -750,6 +971,10 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       if (progress >= 1) {
         game.reachedHorizon = true;
+        const arrivals = game.arrivalMessages || [];
+        if (arrivals.length) {
+          game.lastArrivalMessage = arrivals[Math.floor(Math.random() * arrivals.length)];
+        }
         game.over = true;
         game.running = false;
         drawGameFrame(true, timestamp);
@@ -791,6 +1016,8 @@ document.addEventListener("DOMContentLoaded", () => {
     game.shipScale = 1;
     game.cameraOffsetX = 0;
     game.cameraOffsetY = 0;
+    game.lastFailureMessage = null;
+    game.lastArrivalMessage = null;
     game.running = true;
     attachGameListeners();
     drawGameFrame(false, performance.now());
@@ -812,6 +1039,8 @@ document.addEventListener("DOMContentLoaded", () => {
     game.shipScale = 1;
     game.cameraOffsetX = 0;
     game.cameraOffsetY = 0;
+    game.lastFailureMessage = null;
+    game.lastArrivalMessage = null;
     detachGameListeners();
     game.debris = [];
   }
