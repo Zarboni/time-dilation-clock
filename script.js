@@ -31,10 +31,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const backToTimefallButton = document.getElementById("backToTimefallButton");
   const gameCanvas = document.getElementById("gameCanvas");
   const playAgainButton = document.getElementById("playAgainButton");
+  const flightAudio = document.getElementById("flightAudio");
 
   if (ambientAudio) {
     ambientAudio.src = "IC.mp3";
     ambientAudio.loop = true;
+  }
+  if (flightAudio) {
+    flightAudio.src = "FLIGHT.mp3";
+    flightAudio.loop = true;
+    flightAudio.volume = 0;
   }
 
   const updateInterval = 100;
@@ -114,6 +120,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const MIN_SAFE_DILATION = 0.0005;
   const T_RAMP = ARRIVAL_SECONDS;
+  const AMBIENT_VOL = 0.7;
+  const FLIGHT_VOL = 0.75;
 
   const formatHoursToHMS = (hours) => {
     if (!Number.isFinite(hours) || hours > 1e6) {
@@ -671,6 +679,49 @@ document.addEventListener("DOMContentLoaded", () => {
   const clamp01 = (value) => Math.min(Math.max(value, 0), 1);
   const easeInOut = (x) => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
 
+  const fadeState = { id: null };
+  const crossfade = (fromAudio, toAudio, toVolume, durationMs = 800) => {
+    if (!toAudio) {
+      return;
+    }
+    if (fadeState.id) {
+      cancelAnimationFrame(fadeState.id);
+      fadeState.id = null;
+    }
+    const start = performance.now();
+    const fromStart = fromAudio ? fromAudio.volume : 0;
+    const toStart = toAudio.volume || 0;
+    const fromActive = Boolean(fromAudio);
+    const targetTo = toVolume;
+    const targetFrom = 0;
+
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      if (fromActive) {
+        fromAudio.volume = lerp(fromStart, targetFrom, t);
+      }
+      toAudio.volume = lerp(toStart, targetTo, t);
+      if (t < 1) {
+        fadeState.id = requestAnimationFrame(tick);
+      } else {
+        fadeState.id = null;
+        if (fromActive) {
+          fromAudio.pause();
+          fromAudio.volume = 0;
+        }
+        toAudio.volume = targetTo;
+      }
+    };
+    // ensure playback requested inside user gesture
+    const playPromise = toAudio.play();
+    if (playPromise && typeof playPromise.then === "function") {
+      playPromise.catch(() => {
+        console.info("Audio playback was blocked by the browser; interact again to enable sound.");
+      });
+    }
+    fadeState.id = requestAnimationFrame(tick);
+  };
+
   const drawBlackHole = (ctx, width, height, pEase, qEase, timeSeconds) => {
     const eased = clamp01(pEase);
     const plunge = clamp01(qEase);
@@ -807,20 +858,56 @@ document.addEventListener("DOMContentLoaded", () => {
       ];
     };
 
+    const pickSpawnX = () => {
+      const avoid = 70;
+      const minX = 0;
+      const maxX = game.width;
+      const shipX = game.ship ? game.ship.x : maxX * 0.5;
+      const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+
+      const leftAvoid = Math.max(20, Math.min(avoid, shipX));
+      const rightAvoid = Math.max(20, Math.min(avoid, maxX - shipX));
+
+      let banL = clamp(shipX - leftAvoid, minX, maxX);
+      let banR = clamp(shipX + rightAvoid, minX, maxX);
+
+      let intervals = [];
+      if (banL - minX >= 5) intervals.push([minX, banL]);
+      if (maxX - banR >= 5) intervals.push([banR, maxX]);
+
+      if (!intervals.length) {
+        const reduced = Math.max(10, avoid * 0.4);
+        banL = clamp(shipX - reduced, minX, maxX);
+        banR = clamp(shipX + reduced, minX, maxX);
+        if (banL - minX >= 2) intervals.push([minX, banL]);
+        if (maxX - banR >= 2) intervals.push([banR, maxX]);
+        if (!intervals.length) {
+          return Math.random() * maxX;
+        }
+      }
+
+      const widths = intervals.map(([a, b]) => b - a);
+      const total = widths.reduce((sum, w) => sum + w, 0);
+      const r = Math.random() * total;
+      let acc = 0;
+      for (let i = 0; i < intervals.length; i += 1) {
+        acc += widths[i];
+        if (r <= acc) {
+          const [a, b] = intervals[i];
+          return a + Math.random() * (b - a);
+        }
+      }
+      const last = intervals[intervals.length - 1];
+      return last[0] + Math.random() * (last[1] - last[0]);
+    };
+
     const spawnOne = (typeOverride = null, sizeOverride = null, offset = { x: 0, y: 0 }, speedJitter = 1) => {
       const type = typeOverride || chooseType();
       const size = sizeOverride || chooseSize();
       const sizeScale = size === "small" ? 0.6 : size === "medium" ? 1 : 1.35;
       const baseRadius = (Math.random() * 10 + 14) * sizeScale;
 
-      let x = Math.random() * game.width + offset.x;
-      if (shipSafeMin !== null && shipSafeMax !== null) {
-        let attempts = 0;
-        while (x > shipSafeMin && x < shipSafeMax && attempts < 8) {
-          x = Math.random() * game.width + offset.x;
-          attempts += 1;
-        }
-      }
+      let x = pickSpawnX() + offset.x;
       const y = -baseRadius * 2 + offset.y;
       const speed = baseSpeed * randRange(0.85, 1.15) * speedJitter;
       const spin = (Math.random() - 0.5) * (size === "large" ? 1.6 : size === "small" ? 3.2 : 2.2);
@@ -1129,7 +1216,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!ambientAudio) {
       return;
     }
-    ambientAudio.volume = 0.7;
+    ambientAudio.volume = AMBIENT_VOL;
     const playPromise = ambientAudio.play();
     if (playPromise && typeof playPromise.then === "function") {
       playPromise.catch(() => {
@@ -1297,9 +1384,9 @@ document.addEventListener("DOMContentLoaded", () => {
       landingScreen.classList.add("fade-out");
       experience.classList.remove("hidden");
 
-      requestAnimationFrame(() => {
-        experience.classList.add("revealed");
-      });
+    requestAnimationFrame(() => {
+      experience.classList.add("revealed");
+    });
 
       window.setTimeout(() => {
         landingScreen.style.display = "none";
@@ -1315,16 +1402,16 @@ document.addEventListener("DOMContentLoaded", () => {
         window.setTimeout(() => differentialCard.classList.add("revealed"), 450);
       }
 
-      if (formulaTooltip) {
-        formulaTooltip.style.opacity = "0";
-        formulaTooltip.style.transform = "translateY(25px)";
-      }
+    if (formulaTooltip) {
+      formulaTooltip.style.opacity = "0";
+      formulaTooltip.style.transform = "translateY(25px)";
+    }
 
-      if (gameToggleButton) {
-        gameToggleButton.classList.add("visible");
-      }
-    });
-  }
+    if (gameToggleButton) {
+      gameToggleButton.classList.add("visible");
+    }
+  });
+}
 
   if (singularityCard && formulaTooltip) {
     singularityCard.addEventListener("mouseenter", () => {
@@ -1359,12 +1446,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (gameToggleButton) {
     gameToggleButton.addEventListener("click", () => {
+      crossfade(ambientAudio, flightAudio, FLIGHT_VOL);
       showGameMode();
     });
   }
 
   if (backToTimefallButton) {
     backToTimefallButton.addEventListener("click", () => {
+      crossfade(flightAudio, ambientAudio, AMBIENT_VOL);
       hideGameMode();
     });
   }
