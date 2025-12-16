@@ -449,6 +449,36 @@ body {
   pointer-events: none;
 }
 
+.experience-link {
+  position: fixed;
+  bottom: clamp(1rem, 4vw, 1.8rem);
+  right: clamp(1rem, 4vw, 1.8rem);
+  z-index: 6;
+}
+
+.experience-link__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.75rem 1.2rem;
+  border-radius: 999px;
+  border: 1px solid rgba(111, 228, 255, 0.5);
+  background: rgba(8, 16, 28, 0.7);
+  color: #e7eef9;
+  text-decoration: none;
+  font-family: "Orbitron", sans-serif;
+  letter-spacing: 0.14rem;
+  text-transform: uppercase;
+  box-shadow: 0 12px 30px rgba(111, 228, 255, 0.2);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.experience-link__btn:hover {
+  transform: translateY(-2px);
+  border-color: rgba(185, 149, 255, 0.7);
+  box-shadow: 0 16px 40px rgba(111, 228, 255, 0.3);
+}
+
 .game-toggle {
   position: fixed;
   top: clamp(1rem, 3vw, 1.6rem);
