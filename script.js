@@ -108,7 +108,8 @@ document.addEventListener("DOMContentLoaded", () => {
       "Causal contact is no longer possible.",
       "Information cannot escape this region."
     ],
-    lastArrivalMessage: null
+    lastArrivalMessage: null,
+    nextStageLaunched: false
   };
 
   const formatTime = (date) => {
@@ -1065,6 +1066,12 @@ document.addEventListener("DOMContentLoaded", () => {
         game.over = true;
         game.running = false;
         drawGameFrame(true, timestamp);
+        if (!game.nextStageLaunched) {
+          game.nextStageLaunched = true;
+          window.setTimeout(() => {
+            window.location.href = "racer.html";
+          }, 700);
+        }
         return;
       }
     } else {
@@ -1105,6 +1112,7 @@ document.addEventListener("DOMContentLoaded", () => {
     game.cameraOffsetY = 0;
     game.lastFailureMessage = null;
     game.lastArrivalMessage = null;
+    game.nextStageLaunched = false;
     game.running = true;
     attachGameListeners();
     drawGameFrame(false, performance.now());
@@ -1144,6 +1152,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const hideGameMode = () => {
+    stopGame();
     if (experience) {
       experience.classList.remove("game-hidden");
     }
@@ -1151,7 +1160,6 @@ document.addEventListener("DOMContentLoaded", () => {
       gameMode.classList.remove("visible");
       gameMode.classList.add("hidden");
     }
-    stopGame();
   };
 
   const pickNextQuote = () => {
