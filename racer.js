@@ -6,6 +6,8 @@ const retryBtn = document.getElementById("retryBtn");
 const backBtn = document.getElementById("backBtn");
 const continueBtn = document.getElementById("continueBtn");
 const endOverlay = document.getElementById("endOverlay");
+const hudEl = document.querySelector(".hud");
+const endingScreen = document.getElementById("endingScreen");
 
 let w = window.innerWidth;
 let h = window.innerHeight;
@@ -32,7 +34,10 @@ const state = {
   boostCooldown: 0,
   running: true,
   finished: false,
-  gatePhase: 0
+  gatePhase: 0,
+  intro: true,
+  hudFlickerTimer: 2,
+  endSequenceShown: false
 };
 
 const player = {
@@ -130,14 +135,19 @@ const drawStarfield = (dt) => {
   ctx.fillRect(0, 0, w, h);
   ctx.save();
   ctx.globalCompositeOperation = "screen";
+  const speedFactor = state.speed / 500;
+  const stretch = 1 + state.difficulty * 5 * speedFactor;
   stars.forEach((s) => {
     s.y += (state.speed * 0.2 + 200) * dt * s.depth;
     if (s.y > h + 10) {
       s.y = -10;
       s.x = Math.random() * w;
     }
-    ctx.fillStyle = `rgba(130,200,255,${0.25 * s.depth})`;
-    ctx.fillRect(s.x, s.y, 2, 6 * s.depth);
+    // Relativistic blueshift: red channel drops, blue holds at high difficulty
+    const r = Math.round(130 - state.difficulty * 70);
+    const g = Math.round(200 - state.difficulty * 40);
+    ctx.fillStyle = `rgba(${r},${g},255,${0.25 * s.depth})`;
+    ctx.fillRect(s.x, s.y, 2, Math.max(4, 6 * s.depth * stretch));
   });
   ctx.restore();
 };
@@ -145,14 +155,39 @@ const drawStarfield = (dt) => {
 const laneX = (lane) => w / 2 + laneOffset() + lane * laneWidth;
 
 const drawTrack = (dt) => {
+  const leftRailX = laneX(0) - laneWidth * 0.6;
+  const rightRailX = laneX(LANES - 1) + laneWidth * 0.6;
+  const warpAmp = state.difficulty * 10;
+  const warpFreq = 0.008;
+  const warpPhase = state.time * 1.5;
+
+  const drawRailCurve = (bx, xOff) => {
+    ctx.beginPath();
+    for (let ry = -50; ry <= h + 50; ry += 12) {
+      const xw = Math.sin(ry * warpFreq + warpPhase) * warpAmp + xOff;
+      if (ry === -50) ctx.moveTo(bx + xw, ry);
+      else ctx.lineTo(bx + xw, ry);
+    }
+    ctx.stroke();
+  };
+
+  // Chromatic aberration fringe at high difficulty
+  if (state.difficulty > 0.35) {
+    const ca = (state.difficulty - 0.35) * 5;
+    const caAlpha = (state.difficulty - 0.35) * 0.18;
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = `rgba(255,70,70,${caAlpha})`;
+    drawRailCurve(leftRailX, -ca);
+    drawRailCurve(rightRailX, ca);
+    ctx.strokeStyle = `rgba(70,170,255,${caAlpha})`;
+    drawRailCurve(leftRailX, ca);
+    drawRailCurve(rightRailX, -ca);
+  }
+
   ctx.lineWidth = 4;
   ctx.strokeStyle = palette.rail;
-  ctx.beginPath();
-  ctx.moveTo(laneX(0) - laneWidth * 0.6, -50);
-  ctx.lineTo(laneX(0) - laneWidth * 0.6, h + 50);
-  ctx.moveTo(laneX(LANES - 1) + laneWidth * 0.6, -50);
-  ctx.lineTo(laneX(LANES - 1) + laneWidth * 0.6, h + 50);
-  ctx.stroke();
+  drawRailCurve(leftRailX, 0);
+  drawRailCurve(rightRailX, 0);
 
   ctx.lineWidth = 2;
   ctx.strokeStyle = palette.divider;
@@ -277,10 +312,10 @@ const drawGate = (g, dt) => {
   ctx.strokeRect(w / 2 - margin, y - 20, margin * 2, 60);
 };
 
-const drawHazard = (h) => {
-  const x = laneX(h.lane);
-  const y = h.y;
-  if (h.type === "orb") {
+const drawHazard = (hzd) => {
+  const x = laneX(hzd.lane);
+  const y = hzd.y;
+  if (hzd.type === "orb") {
     ctx.fillStyle = palette.hazardCore;
     ctx.beginPath();
     ctx.arc(x, y, 16, 0, Math.PI * 2);
@@ -293,7 +328,7 @@ const drawHazard = (h) => {
   } else {
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(state.time * h.spin);
+    ctx.rotate(state.time * hzd.spin);
     ctx.fillStyle = palette.hazardRing;
     ctx.beginPath();
     ctx.moveTo(0, -18);
@@ -330,19 +365,75 @@ const drawPickup = (p) => {
 
 const drawPortal = (dt) => {
   const cy = h * 0.18;
-  const radius = 120 + Math.sin(state.time * 2) * 6;
+  const d = state.difficulty;
+  const radius = 112 + Math.sin(state.time * 2) * 6 + d * 20;
+
   ctx.save();
   ctx.translate(w / 2, cy);
+
+  // Inner void darkens with urgency
+  const voidGrad = ctx.createRadialGradient(0, 0, radius * 0.2, 0, 0, radius * 1.15);
+  voidGrad.addColorStop(0, `rgba(2,5,12,${0.7 + d * 0.25})`);
+  voidGrad.addColorStop(1, "rgba(2,5,12,0)");
+  ctx.fillStyle = voidGrad;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius * 1.1, 0, Math.PI * 2);
+  ctx.fill();
+
   ctx.rotate(state.time * 0.4);
   const ring = new Path2D();
   ring.arc(0, 0, radius, 0, Math.PI * 2);
-  ctx.strokeStyle = "rgba(100,220,255,0.5)";
-  ctx.lineWidth = 12;
+
+  // Warm accretion ring
+  ctx.strokeStyle = `rgba(255,160,100,${0.12 + d * 0.28})`;
+  ctx.lineWidth = 18 + d * 10;
   ctx.stroke(ring);
-  ctx.strokeStyle = "rgba(255,160,100,0.18)";
-  ctx.lineWidth = 18;
+
+  // Main cyan ring with glow
+  ctx.shadowColor = "rgba(100,220,255,0.65)";
+  ctx.shadowBlur = 14 + d * 36;
+  ctx.strokeStyle = `rgba(100,220,255,${0.5 - d * 0.15})`;
+  ctx.lineWidth = 10 + d * 8;
   ctx.stroke(ring);
+  ctx.shadowBlur = 0;
+
   ctx.restore();
+
+  // Exit label fades as causality destabilizes
+  if (d < 0.65) {
+    const labelAlpha = ((0.65 - d) / 0.65) * 0.55;
+    ctx.textAlign = "center";
+    ctx.fillStyle = `rgba(100,220,255,${labelAlpha.toFixed(2)})`;
+    ctx.font = `400 ${Math.max(9, Math.round(w * 0.0105))}px "Orbitron", sans-serif`;
+    ctx.fillText("EXIT SINGULARITY", w / 2, cy - radius - 13);
+  }
+};
+
+const drawVignette = () => {
+  if (state.difficulty < 0.05) return;
+  const d = state.difficulty;
+  const grad = ctx.createRadialGradient(w / 2, h / 2, h * 0.28, w / 2, h / 2, Math.max(w, h) * 0.82);
+  grad.addColorStop(0, "rgba(0,0,0,0)");
+  grad.addColorStop(1, `rgba(0,0,${Math.round(d * 30)},${(d * 0.58).toFixed(2)})`);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
+};
+
+const showEndingScreen = () => {
+  try {
+    const obs = sessionStorage.getItem("tf_obs") || "--:--:--";
+    const sing = sessionStorage.getItem("tf_sing") || "--:--:--";
+    const grav = parseFloat(sessionStorage.getItem("tf_grav") || "0.8");
+    const safeGrav = Math.min(0.999, Math.max(0, grav));
+    const dilation = (1 / Math.sqrt(1 - safeGrav)).toFixed(2);
+    const elObs = document.getElementById("statObserver");
+    const elSing = document.getElementById("statSingularity");
+    const elDil = document.getElementById("statDilation");
+    if (elObs) elObs.textContent = obs;
+    if (elSing) elSing.textContent = sing;
+    if (elDil) elDil.textContent = `×${dilation}`;
+  } catch (_) {}
+  if (endingScreen) requestAnimationFrame(() => endingScreen.classList.add("active"));
 };
 
 const drawUI = () => {
@@ -350,8 +441,27 @@ const drawUI = () => {
   const m = String(Math.floor(remaining / 60)).padStart(2, "0");
   const s = String(remaining % 60).padStart(2, "0");
   arrivalText.textContent = `${m}:${s}`;
+
+  // Countdown color: cyan → red-orange with urgency
+  const u = state.difficulty;
+  if (u < 0.5) {
+    arrivalText.style.color = "#9fe6ff";
+  } else {
+    const t = (u - 0.5) / 0.5;
+    const r = Math.round(159 + t * 96);
+    const g = Math.round(230 - t * 175);
+    const b = Math.round(255 - t * 210);
+    arrivalText.style.color = `rgb(${r},${g},${b})`;
+  }
+
   const stabilityScale = clamp(state.stability / 100, 0, 1);
   stabilityFill.style.transform = `scaleX(${stabilityScale})`;
+  // Bar color shifts to red when critical
+  if (state.stability < 30) {
+    stabilityFill.style.background = `linear-gradient(90deg, #ff4d4d, #ff9d5c)`;
+  } else {
+    stabilityFill.style.background = `linear-gradient(90deg, #4ad5ff, #58ffd5)`;
+  }
 };
 
 const updateAI = (dt) => {
@@ -468,7 +578,9 @@ const handleCollisions = (dt) => {
   if (state.stability <= 0 && state.running) {
     state.running = false;
     endOverlay.classList.add("visible");
-    document.getElementById("endTitle").textContent = "Stability lost. Run failed.";
+    document.getElementById("endTitle").textContent = "Stability Lost";
+    const sub = endOverlay.querySelector(".overlay-sub");
+    if (sub) sub.textContent = "The timeline collapsed. The corridor consumed you.";
   }
 };
 
@@ -488,24 +600,24 @@ const updateDifficulty = (dt) => {
 const renderFinish = (dt) => {
   if (!state.finished) return;
   state.gatePhase += dt;
-  const alpha = clamp(state.gatePhase, 0, 1);
+  const alpha = clamp(state.gatePhase / 1.5, 0, 1);
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = "rgba(0,0,0,0.5)";
+  ctx.fillStyle = "#050a12";
   ctx.fillRect(0, 0, w, h);
   ctx.restore();
-  drawPortal(dt);
-  if (state.gatePhase > 1.2) {
-    endOverlay.classList.add("visible");
-    document.getElementById("endTitle").textContent = [
-      "The event horizon has been reached.",
-      "Causal contact is no longer possible.",
-      "Information cannot escape this region."
-    ][Math.floor(Math.random() * 3)];
+  if (alpha < 0.95) drawPortal(dt);
+  if (state.gatePhase > 1.6 && !state.endSequenceShown) {
+    state.endSequenceShown = true;
+    showEndingScreen();
   }
 };
 
 const update = (dt) => {
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = "source-over";
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = "transparent";
   drawStarfield(dt);
   drawTrack(dt);
   drawPortal(dt);
@@ -519,11 +631,6 @@ const update = (dt) => {
   spawnLoop(dt);
   handleCollisions(dt);
 
-  // Move objects visually
-  hazards.forEach((h) => (h.y += state.speed * dt));
-  pickups.forEach((p) => (p.y += state.speed * dt));
-  gates.forEach((g) => (g.y += state.speed * dt * 1.1));
-
   aiList.forEach((ai) => {
     drawVehicle(laneX(ai.lane), ai.y, false, ai.variant, ai.color, ai.glow, false);
   });
@@ -532,14 +639,73 @@ const update = (dt) => {
   gates.forEach((g) => drawGate(g, dt));
 
   drawVehicle(player.x, player.y, true, "arrow", "#7fe7ff", 1, state.boost > 0);
+  drawVignette();
+
+  // HUD flicker at high difficulty — instruments destabilizing
+  if (state.difficulty > 0.5 && hudEl) {
+    state.hudFlickerTimer -= dt;
+    if (state.hudFlickerTimer <= 0) {
+      if (Math.random() < (state.difficulty - 0.5) * 0.35) {
+        hudEl.style.opacity = rng(0.15, 0.6).toFixed(2);
+        setTimeout(() => { if (hudEl) hudEl.style.opacity = "1"; }, 40 + Math.random() * 90);
+      }
+      state.hudFlickerTimer = rng(1.0, 3.5);
+    }
+  }
+
   renderFinish(dt);
   drawUI();
+};
+
+const drawIntro = (now) => {
+  ctx.save();
+  ctx.fillStyle = palette.bg;
+  ctx.fillRect(0, 0, w, h);
+  drawStarfield(0.016);
+
+  ctx.fillStyle = "rgba(5, 10, 18, 0.72)";
+  ctx.fillRect(0, 0, w, h);
+
+  const cx = w / 2;
+  const cy = h / 2;
+  const fs = (scale) => Math.max(12, Math.round(w * scale));
+  ctx.textAlign = "center";
+
+  ctx.shadowColor = "rgba(111, 228, 255, 0.7)";
+  ctx.shadowBlur = 22;
+  ctx.fillStyle = "#6fe4ff";
+  ctx.font = `700 ${fs(0.018)}px "Orbitron", sans-serif`;
+  ctx.fillText("LEVEL 2", cx, cy - 100);
+  ctx.font = `700 ${fs(0.028)}px "Orbitron", sans-serif`;
+  ctx.fillText("RELATIVISTIC CORRIDOR", cx, cy - 62);
+
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = "rgba(231, 238, 249, 0.85)";
+  ctx.font = `300 ${fs(0.016)}px "Titillium Web", sans-serif`;
+  ctx.fillText("You've crossed the event horizon.", cx, cy - 10);
+  ctx.fillText("In dilated spacetime, time moves differently.", cx, cy + 16);
+  ctx.fillText("Race through the corridor before causality collapses.", cx, cy + 42);
+
+  ctx.fillStyle = "rgba(111, 228, 255, 0.92)";
+  ctx.font = `600 ${fs(0.013)}px "Orbitron", sans-serif`;
+  ctx.fillText("A/D or ← → STEER   ·   W BOOST   ·   S BRAKE", cx, cy + 90);
+
+  const pulse = 0.6 + 0.4 * Math.sin(now * 0.003);
+  ctx.fillStyle = `rgba(185, 149, 255, ${pulse.toFixed(2)})`;
+  ctx.font = `400 ${fs(0.013)}px "Titillium Web", sans-serif`;
+  ctx.fillText("Press any key to begin", cx, cy + 132);
+  ctx.restore();
 };
 
 const loop = () => {
   const now = performance.now();
   const dt = clamp((now - lastTime) / 1000, 0, 0.05);
   lastTime = now;
+  if (state.intro) {
+    drawIntro(now);
+    requestAnimationFrame(loop);
+    return;
+  }
   if (state.running || state.finished) {
     update(dt);
   }
@@ -551,29 +717,43 @@ const reset = () => {
   state.time = 0;
   state.arrival = ARRIVAL_SECONDS;
   state.speed = 500;
+  state.speedTarget = 500;
   state.running = true;
   state.finished = false;
   state.stability = 100;
   state.boost = 0;
   state.boostCooldown = 0;
+  state.difficulty = 0;
+  state.gatePhase = 0;
+  player.x = w / 2;
+  player.y = h * 0.78;
+  player.velX = 0;
+  player.wobble = 0;
+  state.hudFlickerTimer = 2;
+  state.endSequenceShown = false;
+  if (hudEl) hudEl.style.opacity = "1";
   hazards.length = 0;
   pickups.length = 0;
   gates.length = 0;
   aiList.length = 0;
   for (let i = 0; i < 6; i += 1) createAI();
   endOverlay.classList.remove("visible");
+  if (endingScreen) endingScreen.classList.remove("active");
   centerLinePhase = 0;
 };
 
 retryBtn.addEventListener("click", reset);
-continueBtn.addEventListener("click", () => {
-  window.location.href = "index.html";
-});
-backBtn.addEventListener("click", () => {
-  window.location.href = "index.html";
-});
+continueBtn.addEventListener("click", () => { window.location.href = "index.html"; });
+backBtn.addEventListener("click", () => { window.location.href = "index.html"; });
+const endingReturnBtn = document.getElementById("endingReturnBtn");
+if (endingReturnBtn) endingReturnBtn.addEventListener("click", () => { window.location.href = "index.html"; });
 
 document.addEventListener("keydown", (e) => {
+  if (state.intro) {
+    state.intro = false;
+    reset();
+    return;
+  }
   if (e.code === "KeyA" || e.code === "ArrowLeft") keys.a = true;
   if (e.code === "KeyD" || e.code === "ArrowRight") keys.d = true;
   if (e.code === "KeyW" || e.code === "ArrowUp") keys.w = true;

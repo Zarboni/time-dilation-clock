@@ -98,9 +98,9 @@ document.addEventListener("DOMContentLoaded", () => {
     shipTiltTarget: 0,
     renderTime: 0,
     failureMessages: [
-      "The event horizon has been reached.",
-      "Causal contact is no longer possible.",
-      "Information cannot escape this region."
+      "Tidal forces tore your ship apart.",
+      "The debris field claimed your vessel.",
+      "You drifted too close — the singularity consumed you."
     ],
     lastFailureMessage: null,
     arrivalMessages: [
@@ -109,7 +109,8 @@ document.addEventListener("DOMContentLoaded", () => {
       "Information cannot escape this region."
     ],
     lastArrivalMessage: null,
-    nextStageLaunched: false
+    nextStageLaunched: false,
+    awaitingStart: true
   };
 
   const formatTime = (date) => {
@@ -255,20 +256,25 @@ document.addEventListener("DOMContentLoaded", () => {
     if (game.keyDownHandler || !window) {
       return;
     }
+    const wasdMap = { KeyW: "ArrowUp", KeyA: "ArrowLeft", KeyS: "ArrowDown", KeyD: "ArrowRight" };
     game.keyDownHandler = (event) => {
+      if (game.awaitingStart) {
+        game.awaitingStart = false;
+        return;
+      }
       if (event.code === "Space" && game.over) {
         startGame();
         return;
       }
-      if (event.code === "ArrowLeft" || event.code === "ArrowRight" || event.code === "ArrowUp" || event.code === "ArrowDown") {
-        game.keys.add(event.code);
+      const mapped = wasdMap[event.code] || event.code;
+      if (mapped === "ArrowLeft" || mapped === "ArrowRight" || mapped === "ArrowUp" || mapped === "ArrowDown") {
+        game.keys.add(mapped);
       }
     };
 
     game.keyUpHandler = (event) => {
-      if (game.keys.has(event.code)) {
-        game.keys.delete(event.code);
-      }
+      const mapped = wasdMap[event.code] || event.code;
+      game.keys.delete(mapped);
     };
 
     window.addEventListener("keydown", game.keyDownHandler);
@@ -602,7 +608,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     ctx.fillStyle = "rgba(111, 228, 255, 0.9)";
     ctx.font = '400 18px "Titillium Web", sans-serif';
-    ctx.fillText("Press Space or Play Again to re-enter the drift", game.width / 2, game.height / 2 + 22);
+    if (game.reachedHorizon) {
+      ctx.fillText("Entering Level 2...", game.width / 2, game.height / 2 + 22);
+    } else {
+      ctx.fillText("Press Space or Play Again to re-enter the drift", game.width / 2, game.height / 2 + 22);
+    }
     ctx.restore();
   };
 
@@ -793,6 +803,56 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.fill();
 
     ctx.restore();
+  };
+
+  const drawInstructionsScreen = (timestamp) => {
+    if (!game.ctx) return;
+    const ctx = game.ctx;
+    const { width, height } = game;
+    const cx = width / 2;
+    const cy = height / 2;
+    const fs = (scale) => Math.max(12, Math.round(width * scale));
+
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = "rgba(5, 10, 18, 0.96)";
+    ctx.fillRect(0, 0, width, height);
+
+    drawBlackHole(ctx, width, height, 0.12, 0, (timestamp || performance.now()) / 1000);
+
+    ctx.fillStyle = "rgba(3, 6, 12, 0.55)";
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.textAlign = "center";
+    ctx.shadowColor = "rgba(111, 228, 255, 0.65)";
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = "#6fe4ff";
+    ctx.font = `700 ${fs(0.028)}px "Orbitron", sans-serif`;
+    ctx.fillText("REACH THE BLACK HOLE", cx, cy - 80);
+
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "rgba(245, 250, 255, 0.88)";
+    ctx.font = `400 ${fs(0.016)}px "Titillium Web", sans-serif`;
+    ctx.fillText("Navigate through the debris field.", cx, cy - 34);
+    ctx.fillText("Survive 75 seconds to be pulled across the event horizon.", cx, cy - 8);
+
+    ctx.fillStyle = "rgba(111, 228, 255, 0.92)";
+    ctx.font = `600 ${fs(0.014)}px "Orbitron", sans-serif`;
+    ctx.fillText("WASD or ARROW KEYS — steer your ship", cx, cy + 38);
+
+    const pulse = 0.6 + 0.4 * Math.sin((timestamp || 0) * 0.003);
+    ctx.fillStyle = `rgba(185, 149, 255, ${pulse.toFixed(2)})`;
+    ctx.font = `400 ${fs(0.013)}px "Titillium Web", sans-serif`;
+    ctx.fillText("Press any key to begin", cx, cy + 78);
+  };
+
+  const transitionToLevel2 = () => {
+    const overlay = document.getElementById("levelTransition");
+    if (overlay) {
+      overlay.classList.add("active");
+    }
+    window.setTimeout(() => {
+      window.location.href = "racer.html";
+    }, 2100);
   };
 
   const spawnDebrisWithParams = (baseSpeed, difficulty, count = 1) => {
@@ -1012,6 +1072,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!game.running) {
       return;
     }
+    if (game.awaitingStart) {
+      drawInstructionsScreen(timestamp);
+      game.rafId = window.requestAnimationFrame(gameLoop);
+      return;
+    }
     if (!game.lastTimestamp) {
       game.lastTimestamp = timestamp;
     }
@@ -1068,9 +1133,12 @@ document.addEventListener("DOMContentLoaded", () => {
         drawGameFrame(true, timestamp);
         if (!game.nextStageLaunched) {
           game.nextStageLaunched = true;
-          window.setTimeout(() => {
-            window.location.href = "racer.html";
-          }, 700);
+          try {
+            sessionStorage.setItem("tf_obs", observerClock.textContent);
+            sessionStorage.setItem("tf_sing", singularityClock.textContent);
+            sessionStorage.setItem("tf_grav", String(gravityFactor));
+          } catch (_) {}
+          transitionToLevel2();
         }
         return;
       }

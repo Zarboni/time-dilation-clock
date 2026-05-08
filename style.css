@@ -542,6 +542,58 @@ body {
   background: transparent;
 }
 
+.level-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: #050912;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.9s ease;
+}
+
+.level-transition.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.level-transition-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.level-transition-eyebrow {
+  margin: 0;
+  font-family: "Orbitron", sans-serif;
+  font-size: clamp(0.75rem, 1.4vw, 0.95rem);
+  letter-spacing: 0.28rem;
+  text-transform: uppercase;
+  color: rgba(111, 228, 255, 0.7);
+}
+
+.level-transition-title {
+  margin: 0;
+  font-family: "Orbitron", sans-serif;
+  font-size: clamp(2rem, 5vw, 3.6rem);
+  letter-spacing: 0.2rem;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  text-shadow: 0 0 40px rgba(111, 228, 255, 0.5);
+}
+
+.level-transition-sub {
+  margin: 0;
+  font-size: clamp(1rem, 2vw, 1.3rem);
+  color: var(--text-secondary);
+  letter-spacing: 0.06rem;
+}
+
 @media (max-width: 720px) {
   body {
     overflow-y: auto;
