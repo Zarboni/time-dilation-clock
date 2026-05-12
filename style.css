@@ -127,6 +127,16 @@ body {
   margin: 0 0 1rem;
 }
 
+.headline h2::after {
+  content: "";
+  display: block;
+  width: 56px;
+  height: 2px;
+  margin-top: 0.75rem;
+  background: linear-gradient(90deg, var(--accent), var(--accent-deep));
+  border-radius: 999px;
+}
+
 .headline p {
   margin: 0;
   max-width: 620px;
@@ -150,6 +160,21 @@ body {
   box-shadow: 0 20px 70px rgba(0, 0, 0, 0.45);
   overflow: hidden;
   transition: transform 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
+}
+
+.clock-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 12%;
+  right: 12%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(111, 228, 255, 0.55), transparent);
+  border-radius: 999px;
+}
+
+.clock-card.singularity::before {
+  background: linear-gradient(90deg, transparent, rgba(185, 149, 255, 0.55), transparent);
 }
 
 .clock-card::after {
@@ -422,10 +447,6 @@ body {
   border-radius: 18px;
   background: var(--tooltip-bg);
   border: 1px solid rgba(185, 149, 255, 0.35);
-  opacity: 0;
-  transform: translateY(25px);
-  pointer-events: none;
-  transition: opacity 0.6s ease, transform 0.6s ease;
 }
 
 .tooltip-title {
@@ -469,8 +490,14 @@ body {
   z-index: 5;
 }
 
+@keyframes toggle-pulse {
+  0%, 100% { box-shadow: 0 12px 40px rgba(111, 228, 255, 0.35); }
+  50% { box-shadow: 0 12px 52px rgba(111, 228, 255, 0.6), 0 0 18px rgba(185, 149, 255, 0.3); }
+}
+
 .game-toggle.visible {
   display: inline-flex;
+  animation: toggle-pulse 3.5s ease-in-out infinite;
 }
 
 .game-toggle:hover {
@@ -542,57 +569,6 @@ body {
   background: transparent;
 }
 
-.level-transition {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
-  background: #050912;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.9s ease;
-}
-
-.level-transition.active {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.level-transition-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.8rem;
-}
-
-.level-transition-eyebrow {
-  margin: 0;
-  font-family: "Orbitron", sans-serif;
-  font-size: clamp(0.75rem, 1.4vw, 0.95rem);
-  letter-spacing: 0.28rem;
-  text-transform: uppercase;
-  color: rgba(111, 228, 255, 0.7);
-}
-
-.level-transition-title {
-  margin: 0;
-  font-family: "Orbitron", sans-serif;
-  font-size: clamp(2rem, 5vw, 3.6rem);
-  letter-spacing: 0.2rem;
-  text-transform: uppercase;
-  color: var(--text-primary);
-  text-shadow: 0 0 40px rgba(111, 228, 255, 0.5);
-}
-
-.level-transition-sub {
-  margin: 0;
-  font-size: clamp(1rem, 2vw, 1.3rem);
-  color: var(--text-secondary);
-  letter-spacing: 0.06rem;
-}
 
 @media (max-width: 720px) {
   body {

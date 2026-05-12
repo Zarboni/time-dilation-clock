@@ -1,84 +1,125 @@
 # Timefall: A Relativity Clock
 
-An immersive, browser-based journey into gravitational time dilation inspired by *Interstellar*. Watch two clocks tick at different speeds, explore animated spacetime visuals, and hear ambient music as you immerse in the pull of gravity.
+A browser-based experience that shows how gravity slows time near a black hole. Two clocks run side by side — one far from the black hole, one close to it — and you can adjust the gravitational pull to see how far apart they drift. There's also a short game where you fly a ship through a debris field and try to reach the event horizon.
 
 ---
 
-## What You’ll See
-- **Landing Moment** – A star-dusted introduction with a “Begin” button that starts the experience and the soundtrack (when an audio file is present).
-- **Observer vs. Singularity Clocks** – One clock keeps regular time while the other slows down according to Einstein’s relativity.
-- **Interactive Gravity Slider** – Drag to strengthen gravity and immediately see the singularity clock slow down.
-- **Time Differential Panel** – Learn how much extra time passes for a distant observer when an hour slips by near the black hole.
-- **Animated Space Backdrop** – A canvas-powered starfield and gravitational lensing effect create a cinematic feel.
-- **Gravity-Reactive Visuals** – The starfield drift and lensing ring motion subtly speed up or slow down as you adjust gravity.
-- **Black Hole Run** – A fullscreen dodge-the-debris mini-game with a growing, swirling black hole that pulls you in by the end of the countdown.
-- **Procedural Spacecraft & Debris** – The interceptor and falling debris are fully canvas-drawn with layered hulls, glowing engines, and varied space junk silhouettes.
-- **Rotating Quotes** – Every few seconds a new science or sci-fi quote appears, keeping the narrative alive.
+## Live Demo
+
+[https://zarboni.github.io/time-dilation-clock/](https://zarboni.github.io/time-dilation-clock/)
+
+---
+
+## What It Does
+
+**Timefall screen**
+
+- Two clocks run simultaneously. The observer clock (far from the black hole) keeps normal time. The clock near the black hole runs slower — how much slower depends on the gravity slider.
+- The gravity slider lets you adjust the gravitational pull between 0.10 and 1.00. The near-black-hole clock updates in real time as you drag.
+- The Time Differential panel shows the practical result: if 1 hour passes near the black hole, how much time has passed for a distant observer? At the default setting it's a little over 2 hours.
+- A formula panel below the observer clock explains the physics: `Δt' = Δt × √(1 − gravityFactor)`.
+- Science quotes rotate every 10 seconds in the lower section.
+- The starfield and lensing animation in the background respond subtly to the gravity setting.
+
+**Game mode**
+
+- Click "Try to reach the black hole" to enter the game.
+- You control a ship and have 75 seconds to reach the event horizon while a debris field falls toward you.
+- Dodge what you can, shoot what you can't. Difficulty increases gradually over the 75 seconds.
+- Reach the end and your ship gets pulled into the black hole. Get hit by debris and the run ends.
 
 ---
 
 ## Quick Start
 
-1. Download or clone the project files.
-2. Optional: place an ambient soundtrack and name it `IC.mp3` in the project root.
-3. Open `index.html` in any modern desktop or mobile browser.
-4. Click **Begin** to start the clocks, animations, and audio.
+1. Clone or download the project.
+2. Open `index.html` in any modern desktop browser (Chrome, Firefox, Safari, Edge).
+3. Click **Begin** to start the clocks and audio.
 
-> Tip: Browsers require a user action before playing sound. Clicking **Begin** satisfies that requirement.
+No build step, no dependencies, no server required.
 
----
-
-## Live Preview
-
-- Experience the project in your browser: <https://zarboni.github.io/time-dilation-clock/>
+> **Audio note:** Browsers block audio until the user interacts with the page. Clicking **Begin** handles this. If you want music, add your own audio files — see the Audio section below.
 
 ---
 
-## Controls & Interactions
+## Controls
 
-| Control | What It Does |
-|---------|--------------|
-| **Begin** button | Reveals the experience and starts the ambient audio (if present). |
-| **Gravitational Pull slider** | Adjusts the gravity factor between 0.10 and 1.00. The singularity clock and differential panel update instantly. |
-| **Hover on “Near the Singularity” card** | A tooltip explains the time dilation formula. |
-| **Try to reach the black hole** | Opens the dodge-the-debris game mode (arrow keys to move, Space/Play Again to restart, Back to Timefall to exit). |
+**Timefall screen**
 
----
+| Control | What it does |
+|---|---|
+| Gravity slider | Adjusts gravitational pull. Both the near-black-hole clock and the differential panel update instantly. |
 
-## Files at a Glance
+**Game mode**
 
-| File | Purpose |
-|------|---------|
-| `index.html` | Page structure and content. |
-| `style.css` | Styling, layout, and responsive behavior. |
-| `script.js` | Clock logic, animations, audio activation, and slider interactions. |
-| `IC.mp3` *(optional)* | Ambient soundtrack that plays after **Begin** is clicked. |
-
----
-
-## Customising the Experience
-
-- **Audio**: Replace `IC.mp3` with any track you like (keep the same filename or update the `script.js` source path).
-- **Quote Pool**: Edit the `quotes` array in `script.js` to include your favourite lines.
-- **Initial Gravity**: Adjust the default slider value in `index.html` (`value="0.8"`) to start with a different intensity.
-- **Colours & Fonts**: Tweak `style.css` to match your preferred sci-fi palette or typography.
+| Key | Action |
+|---|---|
+| `W` / `↑` | Move up |
+| `S` / `↓` | Move down |
+| `A` / `←` | Move left |
+| `D` / `→` | Move right |
+| `Space` | Shoot — tap to fire once, hold to autofire |
+| **Play Again** button | Restart after a run ends |
+| **Back to Timefall** button | Exit the game and return to the clocks |
 
 ---
 
-## Tech Notes (for the curious)
+## Files
 
-- Built with plain HTML, CSS, and vanilla JavaScript – no frameworks required.
-- Uses `requestAnimationFrame` for smooth starfield and lensing animations.
-- Time dilation uses the simplified formula `Δt' = Δt × √(1 - gravityFactor)`.
-- The differential panel converts the gravity factor into an Earth-time ratio and displays it in hours, minutes, and seconds.
-- The optional game mode uses the same canvas to render a growing black hole, debris fields, and a countdown-driven difficulty ramp.
+| File | What it is |
+|---|---|
+| `index.html` | Page structure and all content |
+| `style.css` | Layout, visual styling, and responsive behaviour |
+| `script.js` | All logic: clocks, animations, game, audio |
+| `IC.mp3` *(optional)* | Ambient audio that plays on the Timefall screen |
+| `FLIGHT.mp3` *(optional)* | Audio that plays during the game — cross-fades with IC.mp3 |
 
 ---
 
-## Credits & Inspiration
+## Audio
 
-- Inspired by the film *Interstellar* and its exploration of relativity.
-- Typeface choices: [Orbitron](https://fonts.google.com/specimen/Orbitron) and [Titillium Web](https://fonts.google.com/specimen/Titillium+Web).
-- Soundtrack placeholder: `IC.mp3` (bring your own audio to personalise the atmosphere).
+The project works without audio files. If you want sound:
 
-Enjoy bending time! If you adapt or share the project, a mention of the original concept is always appreciated. ✨
+- Place `IC.mp3` in the project root for the Timefall ambient track.
+- Place `FLIGHT.mp3` in the project root for the game soundtrack.
+- The two tracks cross-fade when you enter and exit the game.
+- You can use any audio format your browser supports — just rename the files or update the source paths in `script.js`.
+
+---
+
+## Customising
+
+- **Quotes** — Edit the `quotes` array near the top of `script.js`.
+- **Starting gravity** — Change `value="0.8"` on the slider in `index.html`.
+- **Colours and fonts** — Everything visual is in `style.css`. The two main accent colours are set as CSS variables at the top: `--accent` (cyan) and `--accent-deep` (purple).
+- **Game difficulty** — The spawn rate, debris speed, and max debris count are controlled by three `lerp()` calls near the top of the `updateDebris` function in `script.js`.
+
+---
+
+## How the Physics Works
+
+The time dilation formula used is a simplified version of the Schwarzschild solution:
+
+```
+Δt' = Δt × √(1 − gravityFactor)
+```
+
+- `Δt` is the time that passes for a distant observer.
+- `Δt'` is the time that passes near the black hole.
+- `gravityFactor` represents how deep in the gravitational well you are (0 = far away, 1 = at the event horizon).
+
+At `gravityFactor = 0.8`, the near-black-hole clock runs at about 45% of normal speed. For every hour that passes there, roughly 2 hours and 14 minutes pass for a distant observer.
+
+---
+
+## Built With
+
+- Plain HTML, CSS, and vanilla JavaScript — no frameworks or libraries.
+- Canvas API for the starfield, lensing animation, and game.
+- Google Fonts: [Orbitron](https://fonts.google.com/specimen/Orbitron) and [Titillium Web](https://fonts.google.com/specimen/Titillium+Web).
+
+---
+
+## Credits
+
+Inspired by the film *Interstellar* and its portrayal of relativistic time dilation.

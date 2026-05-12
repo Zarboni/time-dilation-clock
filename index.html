@@ -43,8 +43,7 @@
       <header class="headline">
         <h2>Timefall: A Relativity Clock</h2>
         <p>
-          Watch how time stretches as gravity bends spacetime—two perspectives,
-          one cosmic moment.
+          Two clocks, one near a black hole and one far away. See how gravity changes the speed of time.
         </p>
       </header>
 
@@ -54,8 +53,7 @@
             <h3>Observer Time</h3>
             <div class="clock-display" id="observerClock">--:--:--</div>
             <p class="clock-caption">
-              An external observer, far from the black hole, experiences time in a
-              familiar cadence.
+              Far from the black hole, time passes normally. This is what you would measure from a safe distance.
             </p>
           </article>
           <div class="tooltip-container">
@@ -66,22 +64,20 @@
                 gravityFactor ≈ <span id="tooltipGravityValue">0.80</span>
               </p>
               <p>
-                Strong gravity slows proper time for the traveler. To a distant
-                observer, their clock lags behind.
+                Strong gravity slows time for anything nearby. From a safe distance, their clock appears to fall behind.
               </p>
             </div>
           </div>
         </div>
 
         <article class="clock-card singularity" data-type="singularity">
-          <h3>Near the Singularity</h3>
+          <h3>Near the Black Hole</h3>
           <div class="lensing-wrapper" aria-hidden="true">
             <canvas id="lensingCanvas" class="lensing-canvas"></canvas>
           </div>
           <div class="clock-display" id="singularityClock">--:--:--</div>
           <p class="clock-caption">
-            Closer to the event horizon, time dilates and ticks crawl under
-            intense gravitational pull.
+            Close to the event horizon, gravity is strong enough to slow time itself. The clock here runs slower.
           </p>
           <div class="gravity-control">
             <label for="gravitySlider">Gravitational Pull</label>
@@ -94,7 +90,7 @@
               value="0.8"
               aria-label="Adjust gravitational pull"
             />
-            <span class="gravity-value">Current factor: <strong id="gravityValue">0.80</strong></span>
+            <span class="gravity-value">Gravity strength: <strong id="gravityValue">0.80</strong></span>
           </div>
         </article>
       </section>
@@ -103,11 +99,11 @@
         <header>
           <h3>Time Differential</h3>
           <p>
-            Closer to a black hole, gravity slows time. Adjust the slider to see how 1 hour here compares to time far from the singularity.
+            Adjust the slider to see how much time passes far away while just 1 hour passes near the black hole.
           </p>
         </header>
         <div class="differential-display">
-          <div class="differential-caption">1 hour near the singularity equals</div>
+          <div class="differential-caption">1 hour near the black hole equals</div>
           <div class="differential-value" id="differentialValue">--:--:--</div>
           <div class="differential-caption secondary">of distant observer time.</div>
         </div>
@@ -127,14 +123,6 @@
       </div>
       <canvas id="gameCanvas" class="game-canvas"></canvas>
     </section>
-
-    <div id="levelTransition" class="level-transition">
-      <div class="level-transition-inner">
-        <p class="level-transition-eyebrow">Level 1 Complete</p>
-        <h2 class="level-transition-title">Event Horizon Crossed</h2>
-        <p class="level-transition-sub">Entering the Relativistic Corridor...</p>
-      </div>
-    </div>
 
     <audio id="ambientAudio" preload="auto"></audio>
     <audio id="flightAudio" preload="auto"></audio>
